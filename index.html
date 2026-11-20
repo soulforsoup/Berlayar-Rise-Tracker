@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Berlayar Rise Queue 462</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one calm phone column. Four answers first, two open sections, everything else folded until asked for. */
+:root{
+  color-scheme:light;
+  --bg:#f4f6f5; --surface:#ffffff; --sunken:#edf1f0; --ink:#13201e; --muted:#55656a; --line:#dce3e1;
+  --accent:#0d6767; --accent-soft:#dcedec;
+  --s1:#2a78d6; --s2:#eb6834;
+  --good:#0a7d0a; --warn:#8a5a00; --crit:#b92f2f; --good-bg:#e2f3e2; --warn-bg:#fdefc8; --crit-bg:#fbe1e1;
+  --hatch:#c98500;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif; --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+:root[data-br-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0e1615; --surface:#162120; --sunken:#1e2b2a; --ink:#e7efed; --muted:#9db0ac; --line:#2b3a38;
+  --accent:#58bdb6; --accent-soft:#17383a;
+  --s1:#3987e5; --s2:#d95926;
+  --good:#4fc24f; --warn:#f0b83a; --crit:#f08080; --good-bg:#163116; --warn-bg:#3a2e0c; --crit-bg:#3d1b1b;
+  --hatch:#c98500;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.page{max-width:680px;margin:0 auto;padding:22px 18px 64px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);font-stretch:88%;margin:0;text-wrap:balance}
+h1{font-size:30px;font-weight:800;line-height:1.1}
+h2{font-size:20px;font-weight:700;line-height:1.2}
+h3{font-size:16px;font-weight:700;margin-top:6px}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tbtn{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;min-height:40px;cursor:pointer;white-space:nowrap}
+header .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;gap:6px;align-items:baseline;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:14px}
+.chip b{font-weight:700}
+.stamp{margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+/* answers */
+.ans{display:flex;flex-direction:column;gap:3px;padding:18px 0;border-bottom:1px solid var(--line)}
+.ans:first-child{padding-top:0}
+.ans:last-child{border-bottom:0;padding-bottom:0}
+.ans .k{font-size:14px;color:var(--muted);font-weight:600}
+.ans .v{font-family:var(--display);font-stretch:85%;font-weight:800;font-size:36px;line-height:1.1;font-variant-numeric:tabular-nums}
+.ans.lead .v{color:var(--accent)}
+.ans .s{font-size:15px;color:var(--muted)}
+/* folding sections */
+.sec>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer;min-height:44px}
+.sec>summary::-webkit-details-marker{display:none}
+.sec>summary .t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hint{font-size:14.5px;color:var(--muted)}
+.chev{width:11px;height:11px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);flex:none;margin:0 6px 4px 0;transition:transform .15s}
+details[open]>summary .chev{transform:rotate(-135deg);margin-bottom:-4px}
+.sec .body{display:flex;flex-direction:column;gap:16px;padding-top:18px}
+.more>summary{cursor:pointer;color:var(--accent);font-size:15px;font-weight:600;min-height:40px;display:flex;align-items:center}
+.more p,.more ul{color:var(--muted);font-size:14.5px;padding-top:6px}
+/* rows */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+.row:first-child{padding-top:2px}
+.row:last-child{border-bottom:0;padding-bottom:2px}
+.row .m{min-width:0;display:flex;flex-direction:column;gap:3px}
+.row .m b{font-weight:600;font-size:16px;line-height:1.35}
+.row .m span{font-size:14.5px;color:var(--muted)}
+.row .f{font-family:var(--display);font-stretch:85%;font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;flex:none}
+.row .f small{display:block;font-family:var(--body);font-weight:600;font-size:12px;color:var(--muted);margin-top:3px}
+.pill{display:inline-block;align-self:flex-start;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.row .m .pill.good{background:var(--good-bg);color:var(--good)}
+.row .m .pill.warn{background:var(--warn-bg);color:var(--warn)}
+.row .m .pill.crit{background:var(--crit-bg);color:var(--crit)}
+/* runway */
+.run{position:relative;height:18px;border-radius:9px;background:var(--sunken);margin:32px 0 6px}
+.run .sent{position:absolute;inset:0 auto 0 0;background:var(--accent-soft);border-radius:9px}
+.run .done{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:9px}
+.run .you{position:absolute;top:-8px;bottom:-8px;width:3px;background:var(--ink);border-radius:2px}
+.run .you span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;font-weight:700;padding-bottom:3px}
+.run-scale{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.key{display:flex;flex-direction:column;gap:8px;font-size:14.5px}
+.key i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+/* tables */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{padding:11px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12.5px;color:var(--muted);font-weight:600;vertical-align:bottom;white-space:normal}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td{font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+/* charts */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--body);fill:var(--muted);font-size:11.5px}
+.chart text.val{fill:var(--ink);font-weight:600}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:13px;line-height:1.4;padding:8px 10px;border-radius:8px;max-width:230px;opacity:0;transition:opacity .1s;z-index:2}
+.tip.on{opacity:1}
+/* controls */
+.controls{display:flex;flex-direction:column;gap:12px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{font:inherit;font-family:var(--display);font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:9px 14px;min-height:42px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;min-height:40px}
+label.opt.chk{justify-content:flex-start}
+label.opt input{width:20px;height:20px;accent-color:var(--accent)}
+select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+/* unit map */
+.umap{display:grid;grid-template-columns:36px repeat(4,minmax(0,1fr));gap:4px;font-variant-numeric:tabular-nums}
+.umap .hd{font-size:12.5px;text-align:center;line-height:1.3;padding-bottom:6px}
+.umap .hd b{display:block;font-family:var(--display);font-size:16px}
+.umap .hd.mine b{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.umap .fl{font-size:12.5px;color:var(--muted);display:flex;align-items:center}
+.u{font-size:12.5px;text-align:center;padding:7px 0;border-radius:5px;border:1px solid var(--line);background:var(--surface)}
+.u.av{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.u.gone{border-color:var(--hatch);background:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--hatch) 35%,transparent) 4px 6px)}
+.u.tk{background:var(--sunken);color:var(--muted);text-decoration:line-through;border-color:transparent}
+.u.none{border-style:dashed;color:var(--muted);background:transparent;font-size:11px}
+.u.low{opacity:.45}
+.sw{display:inline-block;width:26px;height:14px;border-radius:4px;margin-right:8px;vertical-align:-2px;border:1px solid var(--line);padding:0}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px}
+a{color:var(--accent)}
+@media (min-width:620px){.answers{display:grid;grid-template-columns:1fr 1fr;column-gap:32px}.ans:nth-child(-n+2){padding-top:0}.ans:nth-last-child(-n+2){border-bottom:0;padding-bottom:0}}
+@media (prefers-reduced-motion:reduce){.tip,.chev{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="top"><h1>Berlayar Rise 4-room</h1><button type="button" class="tbtn" id="theme">Dark mode</button></div>
+  <div class="chips">
+    <span class="chip">Your queue <b class="num" id="c-q"></b></span>
+    <span class="chip">Quota group <b id="c-eth"></b></span>
+    <span class="chip">Called so far <b class="num" id="c-last"></b></span>
+  </div>
+  <p class="small muted stamp" id="stamp"></p>
+</header>
+
+<section class="card answers" aria-label="Summary">
+  <div class="ans lead"><span class="k">Est. appointment</span><span class="v" id="t-appt"></span><span class="s" id="t-appt-s"></span></div>
+  <div class="ans"><span class="k">Most likely pick</span><span class="v" id="t-pick">…</span><span class="s" id="t-pick-s">Working it out…</span></div>
+  <div class="ans"><span class="k" id="t-chance-k">Floor 12+ in your six stacks</span><span class="v" id="t-chance">…</span><span class="s" id="t-chance-s">Working it out…</span></div>
+  <div class="ans"><span class="k">Units left at your turn</span><span class="v" id="t-left"></span><span class="s" id="t-left-s"></span></div>
+</section>
+
+<details class="card sec" id="land" open>
+  <summary><span class="t"><h2>Where you are likely to land</h2><span class="hint" id="h-land"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <p id="l-lead">Working it out…</p>
+    <div class="rows" id="l-rows"></div>
+    <h3>Most likely units</h3>
+    <div class="rows" id="l-units"></div>
+    <details class="more"><summary>How this order works</summary><p id="l-note"></p></details>
+  </div>
+</details>
+
+<details class="card sec" id="queue" open>
+  <summary><span class="t"><h2>Where the queue is</h2><span class="hint" id="h-queue"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div>
+      <div class="run" id="run"></div>
+      <div class="run-scale num"><span>1</span><span id="run-end"></span></div>
+    </div>
+    <div class="key">
+      <span><i style="background:var(--accent)"></i>Selection done to <b class="num" id="k-done"></b></span>
+      <span><i style="background:var(--accent-soft);border:1px solid var(--line)"></i>Appointment dates sent to about <b class="num" id="k-sent"></b></span>
+    </div>
+    <p id="q-text"></p>
+    <p class="muted small" id="q-sure"></p>
+    <p class="muted small" id="q-check"></p>
+  </div>
+</details>
+
+<details class="card sec" id="mine">
+  <summary><span class="t"><h2>Your six stacks</h2><span class="hint" id="h-mine"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <p id="m-lead">Working it out…</p>
+    <div class="rows" id="m-rows"></div>
+    <h3>If you would go lower or higher</h3>
+    <div class="rows" id="m-floors"></div>
+    <details class="more"><summary>Why the range is wide</summary><p id="m-note"></p></details>
+  </div>
+</details>
+
+<details class="card sec" id="blocks">
+  <summary><span class="t"><h2>Blocks now and at your turn</h2><span class="hint" id="h-blocks"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div class="rows" id="blk-rows"></div>
+    <details class="more"><summary>How the Chinese quota is worked out</summary><p id="blk-note"></p></details>
+  </div>
+</details>
+
+<details class="card sec" id="units">
+  <summary><span class="t"><h2>Unit map</h2><span class="hint" id="h-units"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div class="controls">
+      <div class="seg" id="blk-seg" role="group" aria-label="Block"></div>
+      <label class="opt" for="minfloor">Lowest floor you would take <select id="minfloor"></select></label>
+      <label class="opt chk" for="showproj"><input type="checkbox" id="showproj" checked> Mark units likely gone by your turn</label>
+    </div>
+    <p id="u-sum"></p>
+    <div class="umap" id="umap"></div>
+    <div class="key">
+      <span><span class="sw u av"></span>Available</span>
+      <span><span class="sw u gone"></span>Available now, more likely gone than not by your turn</span>
+      <span><span class="sw u tk"></span>Taken</span>
+      <span><span class="sw u none"></span>No 4-room unit on this floor</span>
+    </div>
+    <details class="more"><summary>Where the view labels come from</summary><p><b>sea</b> on 204A and 204B comes from Stacked Homes' review; <b>sea</b> and <b>sea, part</b> on 200A and 200B come from the tracker in your video; <b>park side</b> comes from Stacked Homes. Stacks with no label were not assessed. Check the HDB site plan before you choose.</p></details>
+  </div>
+</details>
+
+<details class="card sec" id="perday">
+  <summary><span class="t"><h2>Queues called per day</h2><span class="hint" id="h-perday"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div class="key"><span><i style="background:var(--s1)"></i>Booked a flat</span><span><i style="background:var(--s2)"></i>Dropped out</span></div>
+    <div class="chart" id="ch-day"><div class="tip"></div></div>
+    <p class="small muted" id="race-note"></p>
+  </div>
+</details>
+
+<details class="card sec" id="dropouts">
+  <summary><span class="t"><h2>Drop-outs</h2><span class="hint" id="h-dropouts"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <p id="d-text"></p>
+    <div class="chart" id="ch-drop"><div class="tip"></div></div>
+    <p class="small muted" id="d-note"></p>
+  </div>
+</details>
+
+<details class="card sec" id="appts">
+  <summary><span class="t"><h2>Appointment dates shared so far</h2><span class="hint" id="h-appts"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div class="scroll"><table id="ap-table"><thead><tr><th>Queue</th><th>Appointment</th><th>Time</th><th>SMS received</th></tr></thead><tbody></tbody></table></div>
+    <p class="small muted" id="ap-note"></p>
+  </div>
+</details>
+
+<details class="card sec" id="log">
+  <summary><span class="t"><h2>Daily log</h2><span class="hint" id="h-log"></span></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <div class="scroll"><table id="log-table"><thead><tr><th>Date</th><th>Queues</th><th>Booked</th><th>Drop-outs</th><th>Units left</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</details>
+
+<details class="card sec" id="about">
+  <summary><span class="t"><h2>How to read this</h2></span><i class="chev" aria-hidden="true"></i></summary>
+  <div class="body">
+    <ul class="small">
+      <li><b>From the sheet:</b> prices, taken units, last queue number, units taken and drop-outs per day. Source: <a href="https://docs.google.com/spreadsheets/d/1uhp9A37zBUt58wJSPYxYXBc1kjjOq-glPlmHF1Vn5B0/edit">berlayar_rise_chart_Public</a>.</li>
+      <li id="about-quota"></li>
+      <li><b>Projection at your turn:</b> a model replays the bookings so far to learn how strongly each stack is favoured and how fast its floors go from the top down. It then plays out the queue ahead of you about 1,250 times with random drop-outs and the Chinese quota of each block. The result is averaged over five assumptions about how loyal buyers stay to a favoured stack once only lower floors remain. One earlier snapshot barely tells them apart, which is why the ranges are wide.</li>
+      <li><b>Appointment date:</b> assumes the latest daily pace continues on weekdays, skipping public holidays.</li>
+      <li id="about-redhill"></li>
+    </ul>
+  </div>
+</details>
+
+</div>
+
+<script src="data/units.js"></script>
+<script src="data/state.js"></script>
+<script src="model.js"></script>
+<script>
+(function(){
+"use strict";
+var S=window.BR_STATE,U=window.BR_UNITS;
+if(!S||!U){document.querySelector('.page').insertAdjacentHTML('afterbegin','<p class="card">The data files did not load. Reload the page; if this stays, ask Claude to republish the tracker.</p>');return;}
+var $=function(id){return document.getElementById(id)};
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function D(s){var p=s.split('-');return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]))}
+function iso(d){return d.toISOString().slice(0,10)}
+function fd(s,dow){var d=D(s);return (dow?DOW[d.getUTCDay()]+' ':'')+d.getUTCDate()+' '+MON[d.getUTCMonth()]}
+function isWork(d){var w=d.getUTCDay();return w>0&&w<6&&S.holidays.indexOf(iso(d))<0}
+function addWork(s,n){var d=D(s);while(n>0){d=new Date(d.getTime()+864e5);if(isWork(d))n--}return iso(d)}
+function k(p){return '$'+(p/1000).toFixed(1)+'k'}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function sum(a,f){return a.reduce(function(t,x){return t+f(x)},0)}
+
+/* ---- core figures ---- */
+var Q=S.meta.queue,log=S.queueLog,L=log[log.length-1];
+var lastQ=L.last,taken=L.taken,drops=lastQ-taken,dRate=lastQ?drops/lastQ:0;
+var total=U.units.length,pace=L.appts||15;
+var blocks=U.blocks.map(function(b){return b.block});
+var called=Q<=lastQ;
+
+function apptFor(q,p){ if(q<=lastQ){for(var i=0;i<log.length;i++)if(log[i].last>=q)return log[i].d;} return addWork(L.d,Math.ceil((q-lastQ)/p)) }
+var apptDate=apptFor(Q,pace),slowPace=Math.min.apply(null,log.slice(-6).map(function(r){return r.appts||pace})),apptSlow=apptFor(Q,slowPace);
+var posInDay=((Q-lastQ-1)%pace)+1;
+var leads=S.appts.map(function(a){return Math.round((D(a.date)-D(a.posted))/864e5)}).sort(function(a,b){return a-b});
+var lead=leads.length?leads[Math.floor(leads.length/2)]:14;
+var smsDate=iso(new Date(D(apptDate).getTime()-lead*864e5));
+function qRange(q){var m=/^(\d+)x$/.exec(q);if(m)return [m[1]*10,m[1]*10+9];return [+q,+q]}
+var sentTo=S.appts.reduce(function(m,a){return Math.max(m,qRange(a.q)[1])},lastQ);
+var agree=0,future=0;S.appts.forEach(function(a){var r=qRange(a.q);if(r[0]<=lastQ)return;future++;if(apptFor(r[0],pace)===a.date||apptFor(r[1],pace)===a.date)agree++});
+
+/* ---- quota ---- */
+var cap={},snap=S.quotaSnap,hist=S.blockHistory,hSnap=null,hNow=hist[hist.length-1];
+hist.forEach(function(h){if(h.d===snap.d)hSnap=h});
+var nowTaken={},unitsIn={};blocks.forEach(function(b){nowTaken[b]=0;unitsIn[b]=0});
+U.units.forEach(function(u){unitsIn[u.b]++;if(u.t)nowTaken[u.b]++});
+blocks.forEach(function(b){cap[b]=Math.ceil(.84*unitsIn[b])});
+var capTot=sum(blocks,function(b){return cap[b]});
+var cSnapTaken=sum(blocks,function(b){return cap[b]-snap.left[b].C}),uSnapTaken=sum(blocks,function(b){return hSnap?hSnap.taken[b]:0});
+var cShare=uSnapTaken?cSnapTaken/uSnapTaken:.85;
+var cNow={},cMin={};blocks.forEach(function(b){var dlt=Math.max(0,nowTaken[b]-(hSnap?hSnap.taken[b]:0));cNow[b]=snap.left[b].C-dlt*cShare;cMin[b]=snap.left[b].C-dlt});
+var ahead=Math.max(0,Q-1-lastQ);
+var cWorst=capTot-cSnapTaken-(taken-uSnapTaken)-ahead;           /* everyone ahead books and is Chinese */
+var leftWorst=total-taken-ahead,leftCur=total-taken-ahead*(1-dRate),leftRh=total-taken-ahead*(1-S.redhill.finalDropout);
+
+/* ---- stacks + booking model (model.js) ---- */
+var stacks={},order=[];
+U.units.forEach(function(u){var id=u.b+'-'+u.s;if(!stacks[id]){stacks[id]={b:u.b,s:u.s,units:[],tk:0};order.push(id)}stacks[id].units.push(u);if(u.t)stacks[id].tk++});
+var TARGETS=(S.meta.targetStacks||[]).filter(function(id){return stacks[id]}),isMine={};TARGETS.forEach(function(id){isMine[id]=1});
+var R=null,nTaken=U.units.filter(function(u){return u.t}).length,cqInt={};blocks.forEach(function(b){cqInt[b]=Math.max(0,Math.round(cNow[b]))});
+var RANK=(S.meta.prefs&&window.BRModel)?BRModel.rank(U.units,S.meta.prefs):[];
+var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,cShare:cShare,cq:cqInt,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
+  snaps:hist.map(function(h){return {n:sum(blocks,function(b){return h.taken[b]||0}),taken:h.taken}}).filter(function(s){return s.n>0&&s.n<nTaken})};
+var sig=['v4',JSON.stringify(S.meta.prefs||0).length,nTaken,lastQ,taken,Q,TARGETS.join(','),ctx.snaps.map(function(s){return s.n}).join(',')].join('|');
+function runModel(done){
+  if(called||!window.BRModel)return done();
+  try{var c=JSON.parse(localStorage.getItem('br-model')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
+  var runs=[],i=0,LAMS=BRModel.LAMS;
+  (function step(){
+    if(i<LAMS.length){$('t-chance-s').textContent='Working it out, step '+(i+1)+' of '+LAMS.length+'…';setTimeout(function(){runs.push(BRModel.runLambda(ctx,LAMS[i++]));step()},30)}
+    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
+  })();
+}
+function sv(u){return R?(R.survive[u.b+'-'+u.s+'-'+u.f]||0):null}
+function pct(x){return x<.005?'<1%':x>.995?'>99%':Math.round(x*100)+'%'}
+function fl(f){return '#'+(f<10?'0':'')+f}
+function stackList(){var n=TARGETS.map(function(id){return id.split('-')[1]});return n.length>1?n.slice(0,-1).join(', ')+' and '+n[n.length-1]:n.join('')}
+
+/* ---- header + tiles ---- */
+$('c-q').textContent=Q;$('c-eth').textContent=S.meta.ethnicity;$('c-last').textContent=lastQ+' of '+total+' units';
+var lc=/^(\d+)-(\d+)-(\d+)T(\d+):(\d+)/.exec(S.meta.lastChecked||'');
+$('stamp').textContent='Sheet figures to '+fd(L.d)+(lc?' · last checked '+(+lc[3])+' '+MON[lc[2]-1]+', '+((+lc[4]+11)%12+1)+':'+lc[5]+(+lc[4]<12?' am':' pm')+' SGT':'')+(S.meta.note?' · '+S.meta.note:'');
+var minFloor=S.meta.minFloor||2,curBlock=null;
+function row(main,sub,fig,figSub,extra){var r=el('div','row'),m=el('div','m');m.appendChild(el('b',null,main));if(extra)m.appendChild(extra);(Array.isArray(sub)?sub:[sub]).forEach(function(s){if(s)m.appendChild(el('span',null,s))});r.appendChild(m);if(fig!=null){var f=el('div','f',fig);if(figSub)f.appendChild(el('small',null,figSub));r.appendChild(f)}return r}
+function tiles(){
+  $('t-appt').textContent=fd(apptDate,true);
+  $('t-appt-s').textContent=called?'Your number has been called.':'SMS around '+fd(smsDate)+'.';
+  $('t-chance-k').textContent='Floor '+minFloor+'+ in your six stacks';
+  if(R){var rg=R.range[minFloor];$('t-chance').textContent=pct(R.chance[minFloor]);$('t-chance-s').textContent='Chance one is still free. Range '+pct(rg[0])+' to '+pct(rg[1])+'.'}
+  $('t-left').textContent='≈'+Math.round(leftCur);
+  $('t-left-s').textContent='Between '+leftWorst+' and '+Math.round(leftRh)+', depending on drop-outs.';
+  var tp=topPicks(1)[0];
+  if(tp){$('t-pick').textContent=fl(tp.u.f)+'-'+tp.u.s;$('t-pick-s').textContent='Blk '+tp.u.b+' · $'+tp.u.p.toLocaleString('en-SG')+' · about '+pct(R.pick[tp.key])+' if you follow your order.'}
+  else if(R){$('t-pick').textContent='None';$('t-pick-s').textContent='No unit in your order is projected to be free.'}
+}
+function topPicks(n){return R&&R.pick?RANK.filter(function(x){return R.pick[x.key]>0}).sort(function(a,b){return R.pick[b.key]-R.pick[a.key]}).slice(0,n):[]}
+function drawLand(){
+  var sec=$('land');if(!RANK.length){sec.style.display='none';return}
+  var box=$('l-rows'),bu=$('l-units'),rest={free:0,p:0,n:0};box.textContent='';bu.textContent='';
+  (S.meta.prefs.groups||[]).forEach(function(g){var rows=RANK.filter(function(x){return x.grp===g.id}),free=rows.filter(function(x){return !x.u.t}).length,p=R?sum(rows,function(x){return R.pick[x.key]||0}):null;
+    if(R&&p<.01){rest.free+=free;rest.p+=p;rest.n++;return}
+    box.appendChild(row(g.label,free+' free now',R?pct(p):'…'))});
+  if(rest.n)box.appendChild(row('Everything further down your list',rest.free+' free now',pct(rest.p)));
+  if(!R){$('h-land').textContent='Working it out…';return}
+  var tops=topPicks(3),t0=tops[0];
+  tops.forEach(function(x){bu.appendChild(row('Blk '+x.u.b+' '+fl(x.u.f)+'-'+x.u.s,'$'+x.u.p.toLocaleString('en-SG')+' · '+pct(sv(x.u))+' likely free',pct(R.pick[x.key]),'your pick'))});
+  $('l-lead').textContent=t0?'If you follow your order, you most likely end up with Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s+' at $'+t0.u.p.toLocaleString('en-SG')+': about '+pct(R.pick[t0.key])+'.':'No unit in your order is projected to be free.';
+  $('h-land').textContent=t0?'Most likely Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s:'';
+  $('l-note').textContent=S.meta.prefs.note||'';
+}
+function drawMine(){
+  var bs=$('m-rows'),bf=$('m-floors');bs.textContent='';bf.textContent='';
+  TARGETS.forEach(function(id){var st=stacks[id],free=st.units.filter(function(u){return !u.t&&u.f>=minFloor}).length,ps=R&&R.perStack[id];
+    bs.appendChild(row('Blk '+st.b+' · '+st.s,[free+' free now on floor '+minFloor+' and up',ps?'Any floor: '+pct(ps.chance[2]):null],ps?pct(ps.chance[minFloor]):'…'))});
+  if(!R){$('h-mine').textContent='Working it out…';return}
+  var c=R.chance[minFloor],ro=R.runOut[minFloor];
+  $('m-lead').textContent=(c<.2?'A unit on floor '+minFloor+' or higher in stacks '+stackList()+' is unlikely to be left at your turn: about '+pct(c)+'.':c<.6?'It is a toss-up whether a unit on floor '+minFloor+' or higher in stacks '+stackList()+' is left at your turn: about '+pct(c)+'.':'A unit on floor '+minFloor+' or higher in stacks '+stackList()+' is likely to be left at your turn: about '+pct(c)+'.')+(ro?' The last one is projected to go around queue '+ro.mid+'; you are '+Q+'.':'');
+  $('h-mine').textContent=pct(c)+' for floor '+minFloor+' and up';
+  var fs=[20,12,10,8,2];if(fs.indexOf(minFloor)<0)fs.push(minFloor);fs.sort(function(a,b){return b-a});
+  fs.forEach(function(f){var rg=R.range[f],r2=R.runOut[f];bf.appendChild(row(f<=2?'Any floor':'Floor '+f+' and up'+(f===minFloor?' (yours)':''),[pct(rg[0])===pct(rg[1])?null:'Range '+pct(rg[0])+' to '+pct(rg[1]),r2?'Gone by about queue '+r2.mid:'Some left after the queue runs out'],pct(R.chance[f])))});
+  $('m-note').textContent='These are model estimates from the '+nTaken+' units booked so far. The data cannot yet tell whether buyers stay loyal to these stacks when only lower floors remain (low end of the range) or switch to higher floors elsewhere (high end). The range should narrow as more days are logged.';
+}
+
+/* ---- runway ---- */
+(function(){var r=$('run'),pc=function(x){return Math.min(100,x/total*100)+'%'};
+  var a=el('div','sent');a.style.width=pc(sentTo);var b=el('div','done');b.style.width=pc(lastQ);
+  var y=el('div','you');y.style.left='calc('+pc(Q)+' - 1px)';y.appendChild(el('span',null,'You '+Q));
+  r.appendChild(a);r.appendChild(b);r.appendChild(y);
+  $('run-end').textContent=total+' units';$('k-done').textContent=lastQ;$('k-sent').textContent=sentTo;
+  $('q-text').textContent=called?'Your number has been called.':ahead+' queue numbers are still ahead of you. At '+pace+' a day your turn comes '+Math.ceil((Q-lastQ)/pace)+' working days after '+fd(L.d)+', and you would be about number '+posInDay+' of '+pace+' that day.'+(apptSlow!==apptDate?' If the pace drops to '+slowPace+' a day, expect '+fd(apptSlow,true)+'.':'');
+  $('h-queue').textContent=called?'Your number has been called':ahead+' numbers ahead of you';
+  $('q-sure').textContent=(leftWorst>0&&cWorst>0)?'A unit of some kind is effectively certain: even if nobody ahead drops out and all are Chinese, '+leftWorst+' units and '+cWorst+' Chinese-quota places remain.':'';
+  $('q-check').textContent=future?agree+' of '+future+' shared appointment dates still to come match this pace.':'';
+})();
+
+/* ---- blocks ---- */
+function drawBlocks(){var box=$('blk-rows');box.textContent='';
+  blocks.forEach(function(b){var left=unitsIn[b]-nowTaken[b],pl=R?sum(U.units.filter(function(u){return u.b===b&&!u.t}),sv):null,pc=R?R.cqAtTurn[b]:null,pill=null;
+    if(R){var p=pc<1?['crit','Chinese quota likely gone']:pc<15?['warn','Chinese quota tight']:['good','Projected open'];pill=el('span','pill '+p[0],p[1])}
+    box.appendChild(row('Blk '+b,[left+' units left now','Chinese quota: about '+Math.round(cNow[b])+' now'+(R?', about '+Math.round(pc)+' at your turn':'')],R?'≈'+Math.round(pl):'…','left at your turn',pill))});
+  $('h-blocks').textContent=(total-nTaken)+' units left today';
+  $('blk-note').textContent='Each block has its own Chinese limit of 84% of its 4-room units, so a block can close to Chinese buyers while units are still left in it. "Now" starts from the HDB quota figures of '+fd(snap.d)+' and assumes '+Math.round(cShare*100)+'% of bookings since then were Chinese, the share up to that date.';
+}
+
+/* ---- unit map ---- */
+var VIEW={'204A':{'100':'sea','102':'sea'},'204B':{'116':'sea','118':'sea'},'200A':{'109':'sea','111':'sea','113':'park side','115':'park side'},'200B':{'125':'sea, part','127':'sea, part','129':'park side','131':'park side'},'201A':{'145':'park side','147':'park side'}};
+(function(){var seg=$('blk-seg');blocks.forEach(function(b){var bt=el('button',null,b);bt.type='button';bt.addEventListener('click',function(){curBlock=b;drawMap()});seg.appendChild(bt)});
+  var sel=$('minfloor');for(var f=2;f<=40;f++){var o=el('option',null,'#'+(f<10?'0':'')+f);o.value=f;if(f===minFloor)o.selected=true;sel.appendChild(o)}
+  sel.addEventListener('change',function(){minFloor=+sel.value;tiles();drawMine();drawMap()});$('showproj').addEventListener('change',drawMap);
+  curBlock=TARGETS.length?TARGETS[0].split('-')[0]:blocks[0];
+})();
+function drawMap(){
+  var B=U.blocks.filter(function(b){return b.block===curBlock})[0],show=$('showproj').checked&&R,m=$('umap');m.textContent='';
+  Array.prototype.forEach.call($('blk-seg').children,function(bt){bt.setAttribute('aria-pressed',bt.textContent===curBlock?'true':'false')});
+  var by={},maxF=0;U.units.forEach(function(u){if(u.b===curBlock){by[u.f+'-'+u.s]=u;if(u.f>maxF)maxF=u.f}});
+  m.appendChild(el('div','hd',''));
+  B.stacks.forEach(function(s){var st=stacks[curBlock+'-'+s],h=el('div','hd'+(isMine[curBlock+'-'+s]?' mine':''));h.appendChild(el('b',null,s));h.appendChild(document.createTextNode(((VIEW[curBlock]||{})[s]||'not assessed')));h.appendChild(document.createElement('br'));h.appendChild(el('span','muted num',st.tk+'/'+st.units.length+' taken'));m.appendChild(h)});
+  for(var f=maxF;f>=2;f--){m.appendChild(el('div','fl',fl(f)));
+    B.stacks.forEach(function(s){var u=by[f+'-'+s],c;
+      if(!u)c=el('div','u none','no unit');else{var p=sv(u);c=el('div','u '+(u.t?'tk':(show&&p<.5?'gone':'av'))+(f<minFloor?' low':''),k(u.p));c.title='Blk '+u.b+' '+fl(f)+'-'+s+' · $'+u.p.toLocaleString('en-SG')+(u.t?' · taken':(R?' · '+pct(p)+' chance still free at your turn':' · available'))}
+      m.appendChild(c)})}
+  var av=U.units.filter(function(u){return u.b===curBlock&&!u.t&&u.f>=minFloor}),then=av.filter(function(u){return R&&sv(u)>=.5});
+  var cheap=then.slice().sort(function(a,b){return a.p-b.p})[0];
+  $('u-sum').textContent='Blk '+curBlock+': '+av.length+' units on floor '+minFloor+' and up are available now'+(R?'; about '+Math.round(sum(av,sv))+' are projected to be left at your turn'+(cheap?', from '+k(cheap.p)+' ('+fl(cheap.f)+'-'+cheap.s+')':'')+'. Chinese quota here: about '+Math.round(cNow[curBlock])+' now, about '+Math.round(R.cqAtTurn[curBlock])+' at your turn.':'.')+(TARGETS.some(function(id){return id.indexOf(curBlock+'-')===0})?' Your stacks are underlined.':'');
+}
+
+/* ---- charts ---- */
+var NS='http://www.w3.org/2000/svg';
+function svgEl(t,a){var e=document.createElementNS(NS,t);for(var x in a)e.setAttribute(x,a[x]);return e}
+function tipOn(box,evt,txt){var t=box.querySelector('.tip'),r=box.getBoundingClientRect();t.textContent=txt;t.classList.add('on');var x=(evt.touches?evt.touches[0].clientX:evt.clientX)-r.left,y=(evt.touches?evt.touches[0].clientY:evt.clientY)-r.top;t.style.left=Math.max(0,Math.min(r.width-t.offsetWidth,x-t.offsetWidth/2))+'px';t.style.top=Math.max(0,y-t.offsetHeight-12)+'px'}
+function tipOff(box){box.querySelector('.tip').classList.remove('on')}
+function hover(node,box,txt){node.addEventListener('pointermove',function(e){tipOn(box,e,txt)});node.addEventListener('pointerdown',function(e){tipOn(box,e,txt)});node.addEventListener('pointerleave',function(){tipOff(box)})}
+var days=log.map(function(r,ix){var prev=ix?log[ix-1]:{last:0,taken:0};return {d:r.d,from:prev.last+1,to:r.last,n:r.last-prev.last,booked:r.taken-prev.taken,drop:(r.last-prev.last)-(r.taken-prev.taken),left:total-r.taken,rate:r.last?(r.last-r.taken)/r.last:0}});
+function drawDay(){var box=$('ch-day'),old=box.querySelector('svg');if(old)old.remove();
+  var W=Math.max(280,box.clientWidth),H=200,pl=6,pr=6,pt=18,pb=22,show=days.slice(-12),max=Math.max.apply(null,show.map(function(d){return d.n}))||1;
+  var svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Queues called per day, split into booked and dropped out'}),bw=Math.min(34,(W-pl-pr)/show.length-6),step=(W-pl-pr)/show.length,y=function(v){return pt+(H-pt-pb)*(1-v/max)};
+  svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:H-pb,y2:H-pb,stroke:'var(--line)'}));
+  show.forEach(function(d,ix){var x=pl+step*ix+(step-bw)/2,g=svgEl('g',{});
+    var hb=y(0)-y(d.booked);if(d.booked>0)g.appendChild(svgEl('rect',{x:x,y:y(d.booked),width:bw,height:hb,rx:d.drop?0:3,fill:'var(--s1)'}));
+    if(d.drop>0){var hd=y(d.booked)-y(d.n)-2;g.appendChild(svgEl('rect',{x:x,y:y(d.n),width:bw,height:Math.max(2,hd),rx:3,fill:'var(--s2)'}))}
+    var t=svgEl('text',{x:x+bw/2,y:y(d.n)-5,'text-anchor':'middle','class':'val'});t.textContent=d.n;g.appendChild(t);
+    if(show.length<=10||ix%2===(show.length-1)%2){var lb=svgEl('text',{x:x+bw/2,y:H-6,'text-anchor':'middle'});lb.textContent=fd(d.d);g.appendChild(lb)}
+    var hit=svgEl('rect',{x:pl+step*ix,y:0,width:step,height:H,fill:'transparent'});g.appendChild(hit);
+    hover(hit,box,fd(d.d,true)+': queues '+d.from+' to '+d.to+' · '+d.booked+' booked · '+d.drop+' dropped out');svg.appendChild(g)});
+  box.appendChild(svg)}
+function drawDrop(){var box=$('ch-drop'),old=box.querySelector('svg');if(old)old.remove();
+  var W=Math.max(280,box.clientWidth),H=180,pl=30,pr=44,pt=14,pb=22,rh=S.redhill.finalDropout,max=Math.max(rh,Math.max.apply(null,days.map(function(d){return d.rate})))*1.15;
+  var svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':'Share of called queue numbers that dropped out, cumulative by day'}),x=function(i){return pl+(W-pl-pr)*(days.length>1?i/(days.length-1):.5)},y=function(v){return pt+(H-pt-pb)*(1-v/max)};
+  [0,.05,.1,.15].filter(function(v){return v<=max}).forEach(function(v){svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:y(v),y2:y(v),stroke:'var(--line)'}));var t=svgEl('text',{x:pl-6,y:y(v)+4,'text-anchor':'end'});t.textContent=Math.round(v*100)+'%';svg.appendChild(t)});
+  svg.appendChild(svgEl('line',{x1:pl,x2:W-pr,y1:y(rh),y2:y(rh),stroke:'var(--muted)','stroke-dasharray':'4 4'}));
+  var rt=svgEl('text',{x:pl+4,y:y(rh)-5});rt.textContent='Redhill Peaks by the end, about '+Math.round(rh*100)+'% (unverified)';svg.appendChild(rt);
+  var pts=days.map(function(d,i){return x(i)+','+y(d.rate)}).join(' ');
+  svg.appendChild(svgEl('polygon',{points:x(0)+','+y(0)+' '+pts+' '+x(days.length-1)+','+y(0),fill:'var(--s1)',opacity:.12}));
+  svg.appendChild(svgEl('polyline',{points:pts,fill:'none',stroke:'var(--s1)','stroke-width':2,'stroke-linejoin':'round'}));
+  var ld=days[days.length-1];svg.appendChild(svgEl('circle',{cx:x(days.length-1),cy:y(ld.rate),r:4.5,fill:'var(--s1)',stroke:'var(--surface)','stroke-width':2}));
+  var lt=svgEl('text',{x:x(days.length-1)+8,y:y(ld.rate)+4,'class':'val'});lt.textContent=(ld.rate*100).toFixed(1)+'%';svg.appendChild(lt);
+  [0,days.length-1].forEach(function(i){var t=svgEl('text',{x:x(i),y:H-6,'text-anchor':i?'end':'start'});t.textContent=fd(days[i].d);svg.appendChild(t)});
+  days.forEach(function(d,i){var w=(W-pl-pr)/Math.max(1,days.length-1),hit=svgEl('rect',{x:x(i)-w/2,y:0,width:w,height:H,fill:'transparent'});hover(hit,box,fd(d.d,true)+': '+(d.to-(total-d.left))+' of '+d.to+' called have dropped out ('+(d.rate*100).toFixed(1)+'%)');svg.appendChild(hit)});
+  box.appendChild(svg)}
+
+/* ---- text + tables ---- */
+$('race-note').textContent='By race up to '+fd(snap.d)+': Chinese '+cSnapTaken+', Malay '+sum(blocks,function(b){return Math.ceil(.22*unitsIn[b])-snap.left[b].M})+', Indian/Others '+sum(blocks,function(b){return Math.ceil(.12*unitsIn[b])-snap.left[b].IO})+' of '+uSnapTaken+' bookings. A day-by-day race split needs HDB quota figures, which this tracker cannot read automatically yet.';
+$('d-text').textContent=drops+' of the first '+lastQ+' queue numbers did not book ('+(dRate*100).toFixed(1)+'%). Every drop-out ahead of you leaves one more unit when your turn comes.';
+$('d-note').textContent='For your number the drop-out rate changes how many units are left ('+leftWorst+' to '+Math.round(leftRh)+'), not whether you get one.';
+(function(){var tb=$('ap-table').tBodies[0];S.appts.forEach(function(a){var tr=el('tr');['Q'+a.q,fd(a.date,true),a.time,fd(a.posted)].forEach(function(v){tr.appendChild(el('td',null,v))});tb.appendChild(tr)});
+  $('ap-note').textContent='SMS arrived '+lead+' days before each of these appointments. These rows were '+S.apptsSrc+'; send Claude any new dates you see and they will be added.';
+  var lt=$('log-table').tBodies[0];days.slice().reverse().forEach(function(d){var tr=el('tr');[fd(d.d),d.from+'–'+d.to,d.booked,d.drop,d.left].forEach(function(v){tr.appendChild(el('td',null,v))});lt.appendChild(tr)});
+  $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('limits are 84% of each block\'s 4-room units, rounded up ('+capTot+' in total). These limits match the '+fd(snap.d)+' quota figures ('+snap.src+') exactly in all six blocks. Figures after that date are estimates until a newer HDB reading is added.'));
+  $('about-redhill').appendChild(el('b',null,'Redhill Peaks (Feb 2026): '));$('about-redhill').appendChild(document.createTextNode('Chinese limit '+S.redhill.chineseCap+' of '+S.redhill.units+' units, quota ran out near queue '+S.redhill.quotaOutQueue+', about '+Math.round(S.redhill.finalDropout*100)+'% dropped out by the end. These are '+S.redhill.src+'.'));
+})();
+
+$('h-units').textContent='Prices, what is taken and what is likely to go';
+$('h-perday').textContent=pace+' a day at present';
+$('h-dropouts').textContent=(dRate*100).toFixed(1)+'% so far';
+$('h-appts').textContent='Sent up to about queue '+sentTo;
+$('h-log').textContent=days.length+' days logged';
+(function(){var b=$('theme'),root=document.documentElement,th='light';try{th=localStorage.getItem('br-theme')||'light'}catch(e){}
+  function apply(){root.setAttribute('data-br-theme',th);b.textContent=th==='dark'?'Light mode':'Dark mode'}
+  b.addEventListener('click',function(){th=th==='dark'?'light':'dark';try{localStorage.setItem('br-theme',th)}catch(e){}apply()});apply()})();
+Array.prototype.forEach.call(document.querySelectorAll('details.sec'),function(d){d.addEventListener('toggle',function(){if(d.open){drawDay();drawDrop()}})});
+tiles();drawBlocks();drawLand();drawMine();drawMap();drawDay();drawDrop();
+runModel(function(){tiles();drawBlocks();drawLand();drawMine();drawMap()});
+var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){drawDay();drawDrop()},150)});
+})();
+</script>
+</body>
+</html>

@@ -237,7 +237,7 @@ a{color:var(--accent)}
 <details class="card sec" id="appts">
   <summary><span class="t"><h2>Appointment dates shared so far</h2><span class="hint" id="h-appts"></span></span><i class="chev" aria-hidden="true"></i></summary>
   <div class="body">
-    <div class="scroll"><table id="ap-table"><thead><tr><th>Queue</th><th>Appointment</th><th>Time</th><th>SMS received</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="ap-table"><thead><tr><th>Queue</th><th>Appointment</th><th>Time</th><th>SMS date (if known)</th></tr></thead><tbody></tbody></table></div>
     <p class="small muted" id="ap-note"></p>
   </div>
 </details>
@@ -256,7 +256,7 @@ a{color:var(--accent)}
       <li><b>From the sheet:</b> prices, taken units, last queue number, units taken and drop-outs per day. Source: <a href="https://docs.google.com/spreadsheets/d/1uhp9A37zBUt58wJSPYxYXBc1kjjOq-glPlmHF1Vn5B0/edit">berlayar_rise_chart_Public</a>.</li>
       <li id="about-quota"></li>
       <li><b>Projection at your turn:</b> a model replays the bookings so far to learn how strongly each stack is favoured and how fast its floors go from the top down. It then plays out the queue ahead of you about 1,250 times with random drop-outs and the Chinese quota of each block. The result is averaged over five assumptions about how loyal buyers stay to a favoured stack once only lower floors remain. One earlier snapshot barely tells them apart, which is why the ranges are wide.</li>
-      <li><b>Appointment date:</b> assumes the latest daily pace continues on weekdays, skipping public holidays.</li>
+      <li><b>Appointment date:</b> uses community reports and estimates beyond the latest shared date. Bookings are separately recorded through 20 November.</li>
       <li id="about-redhill"></li>
     </ul>
   </div>
@@ -287,18 +287,28 @@ function sum(a,f){return a.reduce(function(t,x){return t+f(x)},0)}
 var Q=S.meta.queue,log=S.queueLog,L=log[log.length-1];
 var lastQ=L.last,taken=L.taken,drops=lastQ-taken,dRate=lastQ?drops/lastQ:0;
 var total=U.units.length,pace=L.appts||15;
+var reports=S.appts||[];
+function qRange(q){var m=/^(\d+)x$/i.exec(q);return m?[+m[1]*10,+m[1]*10+9]:[+q,+q]}
+var latestReport=reports.reduce(function(best,a){return !best||qRange(a.q)[1]>qRange(best.q)[1]?a:best},null);
+var latestBand=latestReport?qRange(latestReport.q):[lastQ,lastQ];
+var recentPace=20; /* approximate rate from community reports, not booked units */
 var blocks=U.blocks.map(function(b){return b.block});
 var called=Q<=lastQ;
 
-function apptFor(q,p){ if(q<=lastQ){for(var i=0;i<log.length;i++)if(log[i].last>=q)return log[i].d;} return addWork(L.d,Math.ceil((q-lastQ)/p)) }
-var apptDate=apptFor(Q,pace),slowPace=Math.min.apply(null,log.slice(-6).map(function(r){return r.appts||pace})),apptSlow=apptFor(Q,slowPace);
+function apptFor(q,p){if(q<=lastQ){for(var i=0;i<log.length;i++)if(log[i].last>=q)return log[i].d;}
+  var matching=reports.filter(function(a){var b=qRange(a.q);return q>=b[0]&&q<=b[1]});
+  if(matching.length)return matching[0].date;
+  if(latestReport&&q>latestBand[1])return addWork(latestReport.date,Math.ceil((q-latestBand[1])/recentPace));
+  var later=reports.filter(function(a){return qRange(a.q)[0]>=q}).sort(function(a,b){return a.date.localeCompare(b.date)});
+  return later.length?later[0].date:addWork(L.d,Math.ceil((q-lastQ)/p));}
+var apptDate=apptFor(Q,pace),slowPace=15,apptSlow=latestReport&&Q>latestBand[1]?addWork(latestReport.date,Math.ceil((Q-latestBand[0])/slowPace)):apptDate;
 var posInDay=((Q-lastQ-1)%pace)+1;
-var leads=S.appts.map(function(a){return Math.round((D(a.date)-D(a.posted))/864e5)}).sort(function(a,b){return a-b});
-var lead=leads.length?leads[Math.floor(leads.length/2)]:14;
-var smsDate=iso(new Date(D(apptDate).getTime()-lead*864e5));
-function qRange(q){var m=/^(\d+)x$/.exec(q);if(m)return [m[1]*10,m[1]*10+9];return [+q,+q]}
-var sentTo=S.appts.reduce(function(m,a){return Math.max(m,qRange(a.q)[1])},lastQ);
-var agree=0,future=0;S.appts.forEach(function(a){var r=qRange(a.q);if(r[0]<=lastQ)return;future++;if(apptFor(r[0],pace)===a.date||apptFor(r[1],pace)===a.date)agree++});
+var leads=S.appts.filter(function(a){return a.posted}).map(function(a){return Math.round((D(a.date)-D(a.posted))/864e5)}).sort(function(a,b){return a-b});
+var lead=leads.length?leads[Math.floor(leads.length/2)]:null;
+var smsDate=lead==null?null:iso(new Date(D(apptDate).getTime()-lead*864e5));
+
+var sentTo=latestBand[1];
+var future=reports.filter(function(a){return a.date>L.d}).length;
 
 /* ---- quota ---- */
 var cap={},snap=S.quotaSnap,hist=S.blockHistory,hSnap=null,hNow=hist[hist.length-1];
@@ -345,7 +355,7 @@ var minFloor=S.meta.minFloor||2,curBlock=null;
 function row(main,sub,fig,figSub,extra){var r=el('div','row'),m=el('div','m');m.appendChild(el('b',null,main));if(extra)m.appendChild(extra);(Array.isArray(sub)?sub:[sub]).forEach(function(s){if(s)m.appendChild(el('span',null,s))});r.appendChild(m);if(fig!=null){var f=el('div','f',fig);if(figSub)f.appendChild(el('small',null,figSub));r.appendChild(f)}return r}
 function tiles(){
   $('t-appt').textContent=fd(apptDate,true);
-  $('t-appt-s').textContent=called?'Your number has been called.':'SMS around '+fd(smsDate)+'.';
+  $('t-appt-s').textContent=called?'Your number has been called.':'Community-based estimate; not an HDB confirmation.';
   $('t-chance-k').textContent='Floor '+minFloor+'+ in your six stacks';
   if(R){var rg=R.range[minFloor];$('t-chance').textContent=pct(R.chance[minFloor]);$('t-chance-s').textContent='Chance one is still free. Range '+pct(rg[0])+' to '+pct(rg[1])+'.'}
   $('t-left').textContent='≈'+Math.round(leftCur);
@@ -388,10 +398,10 @@ function drawMine(){
   var y=el('div','you');y.style.left='calc('+pc(Q)+' - 1px)';y.appendChild(el('span',null,'You '+Q));
   r.appendChild(a);r.appendChild(b);r.appendChild(y);
   $('run-end').textContent=total+' units';$('k-done').textContent=lastQ;$('k-sent').textContent=sentTo;
-  $('q-text').textContent=called?'Your number has been called.':ahead+' queue numbers are still ahead of you. At '+pace+' a day your turn comes '+Math.ceil((Q-lastQ)/pace)+' working days after '+fd(L.d)+', and you would be about number '+posInDay+' of '+pace+' that day.'+(apptSlow!==apptDate?' If the pace drops to '+slowPace+' a day, expect '+fd(apptSlow,true)+'.':'');
+  $('q-text').textContent=called?'Your number has been called.':ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Based on community reports through queue '+latestReport.q+' on '+fd(latestReport.date)+', your estimated appointment is '+fd(apptDate,true)+'. Beyond shared appointments the forecast assumes roughly '+recentPace+' queue numbers per working day.';
   $('h-queue').textContent=called?'Your number has been called':ahead+' numbers ahead of you';
   $('q-sure').textContent=(leftWorst>0&&cWorst>0)?'A unit of some kind is effectively certain: even if nobody ahead drops out and all are Chinese, '+leftWorst+' units and '+cWorst+' Chinese-quota places remain.':'';
-  $('q-check').textContent=future?agree+' of '+future+' shared appointment dates still to come match this pace.':'';
+  $('q-check').textContent=future?future+' future community appointment reports recorded. x represents a ten-number band, not an exact queue number.':'';
 })();
 
 /* ---- blocks ---- */
@@ -463,8 +473,8 @@ function drawDrop(){var box=$('ch-drop'),old=box.querySelector('svg');if(old)old
 $('race-note').textContent='By race up to '+fd(snap.d)+': Chinese '+cSnapTaken+', Malay '+sum(blocks,function(b){return Math.ceil(.22*unitsIn[b])-snap.left[b].M})+', Indian/Others '+sum(blocks,function(b){return Math.ceil(.12*unitsIn[b])-snap.left[b].IO})+' of '+uSnapTaken+' bookings. A day-by-day race split needs HDB quota figures, which this tracker cannot read automatically yet.';
 $('d-text').textContent=drops+' of the first '+lastQ+' queue numbers did not book ('+(dRate*100).toFixed(1)+'%). Every drop-out ahead of you leaves one more unit when your turn comes.';
 $('d-note').textContent='For your number the drop-out rate changes how many units are left ('+leftWorst+' to '+Math.round(leftRh)+'), not whether you get one.';
-(function(){var tb=$('ap-table').tBodies[0];S.appts.forEach(function(a){var tr=el('tr');['Q'+a.q,fd(a.date,true),a.time,fd(a.posted)].forEach(function(v){tr.appendChild(el('td',null,v))});tb.appendChild(tr)});
-  $('ap-note').textContent='SMS arrived '+lead+' days before each of these appointments. These rows were '+S.apptsSrc+'; send Claude any new dates you see and they will be added.';
+(function(){var tb=$('ap-table').tBodies[0];S.appts.forEach(function(a){var tr=el('tr');['Q'+a.q,fd(a.date,true),a.time||'—',a.posted?fd(a.posted):'Not supplied'].forEach(function(v){tr.appendChild(el('td',null,v))});tb.appendChild(tr)});
+  $('ap-note').textContent='Community-reported scheduled appointments, not completed bookings. x masks the final digit. Duplicate reports have been consolidated. The 18 Nov community summary overlaps 17 Nov; the booking log retains the previously recorded non-overlapping range. '+S.apptsSrc;
   var lt=$('log-table').tBodies[0];days.slice().reverse().forEach(function(d){var tr=el('tr');[fd(d.d),d.from+'–'+d.to,d.booked,d.drop,d.left].forEach(function(v){tr.appendChild(el('td',null,v))});lt.appendChild(tr)});
   $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('limits are 84% of each block\'s 4-room units, rounded up ('+capTot+' in total). These limits match the '+fd(snap.d)+' quota figures ('+snap.src+') exactly in all six blocks. Figures after that date are estimates until a newer HDB reading is added.'));
   $('about-redhill').appendChild(el('b',null,'Redhill Peaks (Feb 2026): '));$('about-redhill').appendChild(document.createTextNode('Chinese limit '+S.redhill.chineseCap+' of '+S.redhill.units+' units, quota ran out near queue '+S.redhill.quotaOutQueue+', about '+Math.round(S.redhill.finalDropout*100)+'% dropped out by the end. These are '+S.redhill.src+'.'));
@@ -473,7 +483,7 @@ $('d-note').textContent='For your number the drop-out rate changes how many unit
 $('h-units').textContent='Prices, what is taken and what is likely to go';
 $('h-perday').textContent=pace+' a day at present';
 $('h-dropouts').textContent=(dRate*100).toFixed(1)+'% so far';
-$('h-appts').textContent='Sent up to about queue '+sentTo;
+$('h-appts').textContent='Reports through '+latestReport.q+' · '+fd(latestReport.date);
 $('h-log').textContent=days.length+' days logged';
 (function(){var b=$('theme'),root=document.documentElement,th='light';try{th=localStorage.getItem('br-theme')||'light'}catch(e){}
   function apply(){root.setAttribute('data-br-theme',th);b.textContent=th==='dark'?'Light mode':'Dark mode'}

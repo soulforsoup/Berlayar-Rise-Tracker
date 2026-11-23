@@ -767,6 +767,10 @@ window.BR_STATE={
       "time": "15:00"
     },
     {
+      "q": "28x",
+      "date": "2026-11-25"
+    },
+    {
       "q": "27x",
       "date": "2026-11-25",
       "time": "10:00"
@@ -775,10 +779,6 @@ window.BR_STATE={
       "q": "28x",
       "date": "2026-11-25",
       "time": "14:30"
-    },
-    {
-      "q": "28x",
-      "date": "2026-11-25"
     },
     {
       "q": "28x",
@@ -864,9 +864,19 @@ window.BR_STATE={
       "q": "41x",
       "date": "2026-12-04",
       "time": "15:30"
+    },
+    {
+      "q": "41x",
+      "date": "2026-12-07",
+      "time": "09:15"
+    },
+    {
+      "q": "42x",
+      "date": "2026-12-07",
+      "time": "15:00"
     }
   ],
-  "apptsSrc": "Community-submitted 4-room (prefix S) appointment dates, compiled 22 Nov 2026. Masked x is a ten-number band; reports are not confirmed bookings. SMS dates appear only where already present in the previous tracker.",
+  "apptsSrc": "Community-submitted 4-room (prefix S) appointment dates, updated 23 Nov 2026. Masked x is a ten-number band; reports are not confirmed bookings. SMS dates appear only where explicitly present in earlier tracker records.",
   "holidays": [
     "2026-12-25",
     "2027-01-01"
@@ -878,5 +888,5 @@ window.BR_STATE={
     "finalDropout": 0.14,
     "src": "figures shown in the tracker in your video; not independently verified"
   },
-  "apptsAsOf": "2026-11-22"
+  "apptsAsOf": "2026-11-23"
 };

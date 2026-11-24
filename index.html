@@ -256,6 +256,7 @@ a{color:var(--accent)}
       <li><b>From the sheet:</b> prices, taken units, last queue number, units taken and drop-outs per day. Source: <a href="https://docs.google.com/spreadsheets/d/1uhp9A37zBUt58wJSPYxYXBc1kjjOq-glPlmHF1Vn5B0/edit">berlayar_rise_chart_Public</a>.</li>
       <li id="about-quota"></li>
       <li><b>Projection at your turn:</b> a model replays the bookings so far to learn how strongly each stack is favoured and how fast its floors go from the top down. It then plays out the queue ahead of you about 1,250 times with random drop-outs and the Chinese quota of each block. The result is averaged over five assumptions about how loyal buyers stay to a favoured stack once only lower floors remain. One earlier snapshot barely tells them apart, which is why the ranges are wide.</li>
+      <li id="about-floor"></li>
       <li><b>Appointment date:</b> uses community reports and estimates beyond the latest shared date. Bookings are separately recorded through 20 November.</li>
       <li id="about-redhill"></li>
     </ul>
@@ -331,15 +332,16 @@ var TARGETS=(S.meta.targetStacks||[]).filter(function(id){return stacks[id]}),is
 var R=null,nTaken=U.units.filter(function(u){return u.t}).length,cqInt={};blocks.forEach(function(b){cqInt[b]=Math.max(0,Math.round(cNow[b]))});
 var RANK=(S.meta.prefs&&window.BRModel)?BRModel.rank(U.units,S.meta.prefs):[];
 var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,cShare:cShare,cq:cqInt,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
+  par:window.BRModel?BRModel.learnFloor(U.units):null,
   snaps:hist.map(function(h){return {n:sum(blocks,function(b){return h.taken[b]||0}),taken:h.taken}}).filter(function(s){return s.n>0&&s.n<nTaken})};
-var sig=['v4',JSON.stringify(S.meta.prefs||0).length,nTaken,lastQ,taken,Q,TARGETS.join(','),ctx.snaps.map(function(s){return s.n}).join(',')].join('|');
+var sig=window.BRModel?BRModel.cacheKey(U,S):null;
 function runModel(done){
   if(called||!window.BRModel)return done();
-  try{var c=JSON.parse(localStorage.getItem('br-model')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
+  try{var c=JSON.parse(localStorage.getItem('br-model-v5')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
   var runs=[],i=0,LAMS=BRModel.LAMS;
   (function step(){
     if(i<LAMS.length){$('t-chance-s').textContent='Working it out, step '+(i+1)+' of '+LAMS.length+'…';setTimeout(function(){runs.push(BRModel.runLambda(ctx,LAMS[i++]));step()},30)}
-    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
+    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model-v5',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
   })();
 }
 function sv(u){return R?(R.survive[u.b+'-'+u.s+'-'+u.f]||0):null}
@@ -389,7 +391,7 @@ function drawMine(){
   $('h-mine').textContent=pct(c)+' for floor '+minFloor+' and up';
   var fs=[20,12,10,8,2];if(fs.indexOf(minFloor)<0)fs.push(minFloor);fs.sort(function(a,b){return b-a});
   fs.forEach(function(f){var rg=R.range[f],r2=R.runOut[f];bf.appendChild(row(f<=2?'Any floor':'Floor '+f+' and up'+(f===minFloor?' (yours)':''),[pct(rg[0])===pct(rg[1])?null:'Range '+pct(rg[0])+' to '+pct(rg[1]),r2?'Gone by about queue '+r2.mid:'Some left after the queue runs out'],pct(R.chance[f])))});
-  $('m-note').textContent='These are model estimates from the '+nTaken+' units booked so far. The data cannot yet tell whether buyers stay loyal to these stacks when only lower floors remain (low end of the range) or switch to higher floors elsewhere (high end). The range should narrow as more days are logged.';
+  $('m-note').textContent='These are model estimates from the '+nTaken+' units booked so far. The model learns a project-wide floor preference from booked units but cannot separate height from price and views. The scenario range also reflects uncertainty over buyers remaining loyal to stacks as their best floors are taken. The range should narrow as more days are logged.';
 }
 
 /* ---- runway ---- */
@@ -477,6 +479,8 @@ $('d-note').textContent='For your number the drop-out rate changes how many unit
   $('ap-note').textContent='Community-reported scheduled appointments, not completed bookings. x masks the final digit. Duplicate reports have been consolidated. The 18 Nov community summary overlaps 17 Nov; the booking log retains the previously recorded non-overlapping range. '+S.apptsSrc;
   var lt=$('log-table').tBodies[0];days.slice().reverse().forEach(function(d){var tr=el('tr');[fd(d.d),d.from+'–'+d.to,d.booked,d.drop,d.left].forEach(function(v){tr.appendChild(el('td',null,v))});lt.appendChild(tr)});
   $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('limits are 84% of each block\'s 4-room units, rounded up ('+capTot+' in total). These limits match the '+fd(snap.d)+' quota figures ('+snap.src+') exactly in all six blocks. Figures after that date are estimates until a newer HDB reading is added.'));
+  $('about-floor').appendChild(el('b',null,'Floor preference model: '));
+  $('about-floor').appendChild(document.createTextNode(ctx.par?(ctx.par.method==='hybrid'?'Learnt from '+ctx.par.booked+' booked units in '+ctx.par.stacks+' informative stacks, with a conservative prior. ':'Using a conservative prior until enough bookings are available. ')+ 'Estimated relative weight: '+Math.exp(ctx.par.floor).toFixed(1)+'× for 10 floors higher and '+Math.exp(ctx.par.top2).toFixed(1)+'× extra for the top two floors. This does not isolate price or view effects.':'Not loaded.'));
   $('about-redhill').appendChild(el('b',null,'Redhill Peaks (Feb 2026): '));$('about-redhill').appendChild(document.createTextNode('Chinese limit '+S.redhill.chineseCap+' of '+S.redhill.units+' units, quota ran out near queue '+S.redhill.quotaOutQueue+', about '+Math.round(S.redhill.finalDropout*100)+'% dropped out by the end. These are '+S.redhill.src+'.'));
 })();
 

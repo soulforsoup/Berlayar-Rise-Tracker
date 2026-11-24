@@ -13,6 +13,122 @@ function normal(r){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2
 function gamma(k,r){if(k<1)return gamma(k+1,r)*Math.pow(r(),1/k);var d=k-1/3,c=1/Math.sqrt(9*d);for(;;){var x=normal(r),v=1+c*x;if(v<=0)continue;v=v*v*v;var u=r();if(Math.log(u)<.5*x*x+d-d*v+d*Math.log(v))return d*v}}
 function beta(a,b,r){var x=gamma(a,r),y=gamma(b,r);return x/(x+y)}
 
+
+/* Hybrid floor model.
+   We observe WHICH flats have been taken, not the exact sequence of choices.
+   Condition on the number taken in each stack, so popular stacks do not
+   masquerade as a preference for their particular storey heights.
+   Within a stack use a fixed-size weighted-subset likelihood:
+      P(booked set | count, floors) proportional to
+      exp(floor * sum((storey - 20)/10) + top2 * count(top-two floors)).
+   A Gaussian prior keeps small or unusual samples from producing extreme
+   weights. Height, views and floor-dependent prices are confounded, so
+   these are descriptive preferences, not causal estimates. */
+var VERSION='floor-hybrid-v1';
+var PAR={floor:Math.log(2),top2:Math.log(1.25)};
+var PRIOR_SD={floor:0.65,top2:0.60};
+var LEGACY_PAR={floor:1.75,top2:1.5};
+
+function cacheKey(data,state){
+  /* Full, deterministic model-input equality: a one-unit swap MUST invalidate
+     even when the total booked count and last queue number do not change. */
+  return JSON.stringify({
+    version:VERSION,
+    blocks:data.blocks,
+    units:data.units,
+    queueLog:state.queueLog,
+    blockHistory:state.blockHistory,
+    quotaSnap:state.quotaSnap,
+    redhill:state.redhill,
+    queue:state.meta.queue,
+    ethnicity:state.meta.ethnicity,
+    targetStacks:state.meta.targetStacks,
+    prefs:state.meta.prefs
+  });
+}
+function floorGroups(units){
+  var by={},groups=[],booked=0;
+  units.forEach(function(u){var key=u.b+'-'+u.s;(by[key]=by[key]||[]).push(u);if(u.t)booked++});
+  Object.keys(by).forEach(function(id){
+    var us=by[id],k=us.filter(function(u){return u.t}).length;
+    if(k===0||k===us.length)return;
+    var top=Math.max.apply(null,us.map(function(u){return u.f}));
+    groups.push({k:k,items:us.map(function(u){return {
+      x:(u.f-20)/10,t:u.f>=top-1?1:0,taken:u.t?1:0
+    }})});
+  });
+  return {groups:groups,booked:booked};
+}
+function floorMoments(items,k,floor,top2){
+  /* Exact elementary-symmetric-polynomial moments of all subsets of size k.
+     Descending j prevents double-counting the same flat. */
+  var z=new Float64Array(k+1),sx=new Float64Array(k+1),st=new Float64Array(k+1),
+      sxx=new Float64Array(k+1),sxt=new Float64Array(k+1),stt=new Float64Array(k+1);
+  z[0]=1;
+  for(var i=0;i<items.length;i++){
+    var x=items[i].x,t=items[i].t,w=Math.exp(floor*x+top2*t);
+    for(var j=Math.min(k,i+1);j>=1;j--){
+      var z0=z[j-1],x0=sx[j-1],t0=st[j-1];
+      z[j]+=w*z0;
+      sx[j]+=w*(x0+x*z0);
+      st[j]+=w*(t0+t*z0);
+      sxx[j]+=w*(sxx[j-1]+2*x*x0+x*x*z0);
+      sxt[j]+=w*(sxt[j-1]+x*t0+t*x0+x*t*z0);
+      stt[j]+=w*(stt[j-1]+2*t*t0+t*t*z0);
+    }
+  }
+  if(!(z[k]>0)||!isFinite(z[k]))return null;
+  var ex=sx[k]/z[k],et=st[k]/z[k];
+  return {logz:Math.log(z[k]),ex:ex,et:et,
+    xx:Math.max(0,sxx[k]/z[k]-ex*ex),
+    xt:sxt[k]/z[k]-ex*et,
+    tt:Math.max(0,stt[k]/z[k]-et*et)};
+}
+function floorObjective(data,floor,top2){
+  var pF=1/(PRIOR_SD.floor*PRIOR_SD.floor),pT=1/(PRIOR_SD.top2*PRIOR_SD.top2);
+  var ll=-0.5*pF*Math.pow(floor-PAR.floor,2)-0.5*pT*Math.pow(top2-PAR.top2,2);
+  var gF=-pF*(floor-PAR.floor),gT=-pT*(top2-PAR.top2);
+  var hFF=pF,hFT=0,hTT=pT;
+  for(var i=0;i<data.groups.length;i++){
+    var group=data.groups[i],m=floorMoments(group.items,group.k,floor,top2);
+    if(!m)return null;
+    var obsF=0,obsT=0;
+    for(var j=0;j<group.items.length;j++)if(group.items[j].taken){
+      obsF+=group.items[j].x;obsT+=group.items[j].t;
+    }
+    ll+=floor*obsF+top2*obsT-m.logz;
+    gF+=obsF-m.ex;gT+=obsT-m.et;
+    hFF+=m.xx;hFT+=m.xt;hTT+=m.tt;
+  }
+  return {ll:ll,gF:gF,gT:gT,hFF:hFF,hFT:hFT,hTT:hTT};
+}
+function learnFloor(units){
+  var data=floorGroups(units),f=PAR.floor,t=PAR.top2;
+  var fallback={floor:f,top2:t,booked:data.booked,stacks:data.groups.length,method:'prior'};
+  if(data.booked<20||data.groups.length<3)return fallback;
+  for(var iter=0;iter<20;iter++){
+    var o=floorObjective(data,f,t);
+    if(!o)return fallback;
+    var det=o.hFF*o.hTT-o.hFT*o.hFT;
+    if(!(det>1e-9))break;
+    var df=(o.hTT*o.gF-o.hFT*o.gT)/det;
+    var dt=(o.hFF*o.gT-o.hFT*o.gF)/det;
+    var step=1,nf=f,nt=t,trial;
+    for(var tries=0;tries<16;tries++){
+      nf=Math.max(-0.5,Math.min(2.5,f+step*df));
+      nt=Math.max(-1.25,Math.min(1.8,t+step*dt));
+      trial=floorObjective(data,nf,nt);
+      if(trial&&trial.ll>=o.ll-1e-8)break;
+      step*=0.5;
+    }
+    if(!trial||trial.ll<o.ll-1e-8)break;
+    if(Math.abs(nf-f)+Math.abs(nt-t)<1e-6)break;
+    f=nf;t=nt;
+  }
+  if(!isFinite(f)||!isFinite(t))return fallback;
+  return {floor:f,top2:t,booked:data.booked,stacks:data.groups.length,method:'hybrid'};
+}
+
 function prep(units,par){
   var ids=[],ix={},st=[];
   units.forEach(function(u){var id=u.b+'-'+u.s,k=ix[id];if(k==null){k=ix[id]=ids.length;ids.push(id);st.push({id:id,b:u.b,s:u.s,units:[],top:0,tk:0})}st[k].units.push(u);if(u.f>st[k].top)st[k].top=u.f;if(u.t)st[k].tk++});
@@ -87,11 +203,11 @@ function forecast(o){
   blocks.forEach(function(b){out.cqAtTurn[b]=cqEnd[b]/S});
   P.st.forEach(function(x,k2){x.units.forEach(function(u,j2){out.survive[u.b+'-'+u.s+'-'+u.f]=u.t?0:surv[k2][j2]/S})});
   return out}
-var PAR={floor:1.75,top2:1.5},LAMS=[0,0.25,0.5,0.75,1];
+var LAMS=[0,0.25,0.5,0.75,1];
 /* ctx: units, lastQ, queue, drops, cShare, cq, targets, snaps:[{n, taken:{block:count}}] (earlier block snapshots) */
 function runLambda(ctx,lam,opt){
   opt=opt||{};var sizes=ctx.snaps.map(function(s){return s.n});
-  var cal=calibrate(ctx.units,PAR,lam,sizes,{sims:opt.calSims||60,rounds:opt.rounds||8});
+  var cal=calibrate(ctx.units,ctx.par||learnFloor(ctx.units),lam,sizes,{sims:opt.calSims||60,rounds:opt.rounds||8});
   var loss=0;ctx.snaps.forEach(function(s,i){for(var b in s.taken){var m=cal.snaps[i][b]||0;loss+=(m-s.taken[b])*(m-s.taken[b])/(m+1)}});
   var fc=forecast({cal:cal,lastQ:ctx.lastQ,queue:ctx.queue,drops:ctx.drops,called:ctx.lastQ,cShare:ctx.cShare,cq:ctx.cq,targets:ctx.targets,ranked:ctx.ranked,sims:opt.sims||250,seed:462+Math.round(lam*100)});
   return {lam:lam,loss:loss,fc:fc}
@@ -122,5 +238,5 @@ function rank(units,pf){
     us.sort(st.pooled?function(a,b){return a[2]-b[2]||a[1]-b[1]}:function(a,b){return a[1]-b[1]||a[2]-b[2]});
     us.forEach(function(x){seen[x[3]]=1;out.push({key:x[3],u:x[0],grp:st.grp,sub:x[0].b+' · '+x[0].s})})});
   return out}
-root.BRModel={rank:rank,prep:prep,calibrate:calibrate,forecast:forecast,runLambda:runLambda,combine:combine,LAMS:LAMS,PAR:PAR,mulberry:mulberry};
+root.BRModel={VERSION:VERSION,rank:rank,prep:prep,calibrate:calibrate,forecast:forecast,runLambda:runLambda,combine:combine,learnFloor:learnFloor,cacheKey:cacheKey,LAMS:LAMS,PAR:PAR,LEGACY_PAR:LEGACY_PAR,mulberry:mulberry};
 })(typeof window!=='undefined'?window:globalThis);

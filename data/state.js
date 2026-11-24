@@ -5,9 +5,9 @@ window.BR_STATE={
     "queue": 462,
     "ethnicity": "Chinese",
     "minFloor": 12,
-    "lastChecked": "2026-11-23T14:03:00+08:00",
+    "lastChecked": "2026-11-24T08:20:00+08:00",
     "unitsAsOf": "2026-11-23",
-    "note": "",
+    "note": "23 Nov booked-unit figures corrected in the source sheet; 24 Nov 4-room results not yet recorded.",
     "targetStacks": [
       "201B-149",
       "201B-151",
@@ -530,7 +530,7 @@ window.BR_STATE={
     {
       "d": "2026-11-23",
       "last": 255,
-      "taken": 240,
+      "taken": 243,
       "appts": 15
     }
   ],
@@ -597,11 +597,11 @@ window.BR_STATE={
     },
     {
       "d": "2026-11-23",
-      "src": "4-Room Price Chart, colour-coded taken units",
+      "src": "4-Room Price Chart, corrected 23 Nov 2026 colour-coded taken units",
       "taken": {
         "200A": 20,
         "200B": 8,
-        "201A": 23,
+        "201A": 26,
         "201B": 78,
         "204A": 60,
         "204B": 51

@@ -892,9 +892,14 @@ window.BR_STATE={
       "q": "42x",
       "date": "2026-12-07",
       "time": "15:00"
+    },
+    {
+      "q": "43x",
+      "date": "2026-12-08",
+      "time": "11:15"
     }
   ],
-  "apptsSrc": "Community-submitted 4-room (prefix S) appointment dates, updated 23 Nov 2026. Masked x is a ten-number band; reports are not confirmed bookings. SMS dates appear only where explicitly present in earlier tracker records.",
+  "apptsSrc": "Community-submitted 4-room (prefix S) appointment dates, updated 24 Nov 2026. Masked x is a ten-number band; reports are not confirmed bookings. SMS dates appear only where explicitly present in earlier tracker records.",
   "holidays": [
     "2026-12-25",
     "2027-01-01"
@@ -906,5 +911,5 @@ window.BR_STATE={
     "finalDropout": 0.14,
     "src": "figures shown in the tracker in your video; not independently verified"
   },
-  "apptsAsOf": "2026-11-23"
+  "apptsAsOf": "2026-11-24"
 };

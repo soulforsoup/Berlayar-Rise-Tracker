@@ -5,9 +5,9 @@ window.BR_STATE={
     "queue": 462,
     "ethnicity": "Chinese",
     "minFloor": 12,
-    "lastChecked": "2026-11-24T08:20:00+08:00",
-    "unitsAsOf": "2026-11-23",
-    "note": "23 Nov booked-unit figures corrected in the source sheet; 24 Nov 4-room results not yet recorded.",
+    "lastChecked": "2026-11-25T08:17:00+08:00",
+    "unitsAsOf": "2026-11-24",
+    "note": "Unit availability and queue log through 24 Nov 2026; future appointment dates are community/applicant reports.",
     "targetStacks": [
       "201B-149",
       "201B-151",
@@ -439,6 +439,12 @@ window.BR_STATE={
           "max": 11
         }
       ]
+    },
+    "appointment": {
+      "queue": 462,
+      "date": "2026-12-09",
+      "time": "15:15",
+      "source": "applicant"
     }
   },
   "queueLog": [
@@ -532,6 +538,12 @@ window.BR_STATE={
       "last": 255,
       "taken": 243,
       "appts": 15
+    },
+    {
+      "d": "2026-11-24",
+      "last": 270,
+      "taken": 256,
+      "appts": 15
     }
   ],
   "blockHistory": [
@@ -605,6 +617,18 @@ window.BR_STATE={
         "201B": 78,
         "204A": 60,
         "204B": 51
+      }
+    },
+    {
+      "d": "2026-11-24",
+      "src": "4-Room Price Chart, colour-coded booked units",
+      "taken": {
+        "200A": 26,
+        "200B": 9,
+        "201A": 27,
+        "201B": 78,
+        "204A": 63,
+        "204B": 53
       }
     }
   ],
@@ -785,10 +809,6 @@ window.BR_STATE={
       "time": "15:00"
     },
     {
-      "q": "28x",
-      "date": "2026-11-25"
-    },
-    {
       "q": "27x",
       "date": "2026-11-25",
       "time": "10:00"
@@ -797,6 +817,10 @@ window.BR_STATE={
       "q": "28x",
       "date": "2026-11-25",
       "time": "14:30"
+    },
+    {
+      "q": "28x",
+      "date": "2026-11-25"
     },
     {
       "q": "28x",
@@ -897,9 +921,19 @@ window.BR_STATE={
       "q": "43x",
       "date": "2026-12-08",
       "time": "11:15"
+    },
+    {
+      "q": "45x",
+      "date": "2026-12-09",
+      "time": "10:00"
+    },
+    {
+      "q": "462",
+      "date": "2026-12-09",
+      "time": "15:15"
     }
   ],
-  "apptsSrc": "Community-submitted 4-room (prefix S) appointment dates, updated 24 Nov 2026. Masked x is a ten-number band; reports are not confirmed bookings. SMS dates appear only where explicitly present in earlier tracker records.",
+  "apptsSrc": "Community-submitted 4-room appointment dates, updated 25 Nov 2026; queue 462's 9 Dec 15:15 appointment supplied by applicant. Masked x represents a ten-number band. Future appointments are not bookings.",
   "holidays": [
     "2026-12-25",
     "2027-01-01"
@@ -911,5 +945,5 @@ window.BR_STATE={
     "finalDropout": 0.14,
     "src": "figures shown in the tracker in your video; not independently verified"
   },
-  "apptsAsOf": "2026-11-24"
+  "apptsAsOf": "2026-11-25"
 };

@@ -24,7 +24,7 @@ function beta(a,b,r){var x=gamma(a,r),y=gamma(b,r);return x/(x+y)}
    A Gaussian prior keeps small or unusual samples from producing extreme
    weights. Height, views and floor-dependent prices are confounded, so
    these are descriptive preferences, not causal estimates. */
-var VERSION='floor-hybrid-v1';
+var VERSION='quota-sensitivity-v2';
 var PAR={floor:Math.log(2),top2:Math.log(1.25)};
 var PRIOR_SD={floor:0.65,top2:0.60};
 var LEGACY_PAR={floor:1.75,top2:1.5};
@@ -39,6 +39,7 @@ function cacheKey(data,state){
     queueLog:state.queueLog,
     blockHistory:state.blockHistory,
     quotaSnap:state.quotaSnap,
+    quotaModel:state.quotaModel,
     redhill:state.redhill,
     queue:state.meta.queue,
     ethnicity:state.meta.ethnicity,
@@ -166,13 +167,13 @@ function calibrate(units,par,lam,snapSizes,opt){
 function forecast(o){
   var P=o.cal.P,a=o.cal.a,lam=o.cal.lam,K=P.st.length,S=o.sims||600,r=mulberry(o.seed||462),tgt={};(o.targets||[]).forEach(function(id){tgt[id]=1});
   var isT=P.st.map(function(s){return tgt[s.id]?1:0}),blocks=P.blocks,F=[],CL=new Uint8Array(K);for(var f=2;f<=50;f++)F.push(f);
-  var surv=P.st.map(function(s){return new Float64Array(s.units.length)}),ok={},run={},ps={},cqEnd={},leftEnd=0,k,j;
-  F.forEach(function(f){ok[f]=0;run[f]=[]});blocks.forEach(function(b){cqEnd[b]=0});
-  P.st.forEach(function(s,k){if(isT[k]){ps[s.id]={ok:{},top:[]};F.forEach(function(f){ps[s.id].ok[f]=0})}});
+  var surv=P.st.map(function(s){return new Float64Array(s.units.length)}),joint=P.st.map(function(s){return new Float64Array(s.units.length)}),ok={},jointOk={},run={},ps={},cqEnd={},quotaOpen={},leftEnd=0,k,j;
+  F.forEach(function(f){ok[f]=0;jointOk[f]=0;run[f]=[]});blocks.forEach(function(b){if(!Number.isInteger(o.caps[b]))throw Error('Missing official cap: '+b);cqEnd[b]=0;quotaOpen[b]=0});
+  P.st.forEach(function(s,k){if(isT[k]){ps[s.id]={ok:{},joint:{},top:[]};F.forEach(function(f){ps[s.id].ok[f]=0;ps[s.id].joint[f]=0})}});
   var loc={},rk=[],rkKey=[];P.st.forEach(function(x,k2){x.units.forEach(function(u,j2){loc[u.b+'-'+u.s+'-'+u.f]=[k2,j2]})});
   (o.ranked||[]).forEach(function(key){if(loc[key]){rk.push(loc[key]);rkKey.push(key)}});var pickCnt=new Float64Array(rk.length),noPick=0;
   for(var s=0;s<S;s++){
-    var d=beta(o.drops+1,o.called-o.drops+1,r),cq={};blocks.forEach(function(b){cq[b]=o.cq[b]});
+    var d=beta(o.drops+1,o.called-o.drops+1,r),cq={};blocks.forEach(function(b){var n=o.bookedByBlock[b]||0,used=0;for(var i=0;i<n;i++)if(r()<o.chineseShare)used++;cq[b]=Math.max(0,o.caps[b]-used)});
     var free=P.st.map(function(x){return Uint8Array.from(x.units,function(u){return u.t?0:1})}),sum=P.st.map(function(x,k2){var t=0;for(var i=0;i<x.w.length;i++)if(free[k2][i])t+=x.w[i];return t});
     var tLeft={},lastTaken={},remaining=0;F.forEach(function(f){tLeft[f]=0});
     for(k=0;k<K;k++)for(j=0;j<free[k].length;j++)if(free[k][j]){remaining++;if(isT[k])for(var f2=2;f2<=P.st[k].units[j].f;f2++)tLeft[f2]++}
@@ -180,14 +181,35 @@ function forecast(o){
     while(guard++<4000&&(remaining>0||!snap)){
       if(snap&&(tLeft[2]<=0||q>o.queue+900))break;      /* nothing more to learn for the target stacks */
       q++;
-      if(q===o.queue&&!snap){snap=true;var best=0;
-        for(k=0;k<K;k++){var open=cq[P.st[k].b]>=1,bf=0;for(j=0;j<free[k].length;j++)if(free[k][j]){surv[k][j]++;if(open&&P.st[k].units[j].f>bf)bf=P.st[k].units[j].f}
-          if(isT[k]){if(bf>best)best=bf;ps[P.st[k].id].top.push(bf);for(var fi=0;fi<F.length;fi++)if(bf>=F[fi])ps[P.st[k].id].ok[F[fi]]++}}
-        F.forEach(function(f){if(best>=f)ok[f]++});blocks.forEach(function(b){cqEnd[b]+=cq[b]});leftEnd+=remaining;
-        var got=false;for(var ri=0;ri<rk.length;ri++){var kk=rk[ri][0];if(free[kk][rk[ri][1]]&&cq[P.st[kk].b]>=1){pickCnt[ri]++;got=true;break}}if(!got)noPick++}
-      if(remaining<=0)break;
+      if(q===o.queue&&!snap){snap=true;var best=0,bestEligible=0;
+        for(k=0;k<K;k++){var open=cq[P.st[k].b]>=1,bf=0,be=0;
+          for(j=0;j<free[k].length;j++)if(free[k][j]){
+            surv[k][j]++;
+            var floor=P.st[k].units[j].f;
+            if(isT[k]&&floor>bf)bf=floor;
+            if(open){joint[k][j]++;if(isT[k]&&floor>be)be=floor;}
+          }
+          if(isT[k]){if(bf>best)best=bf;if(be>bestEligible)bestEligible=be;
+            ps[P.st[k].id].top.push(bf);
+            for(var fi=0;fi<F.length;fi++){
+              if(bf>=F[fi])ps[P.st[k].id].ok[F[fi]]++;
+              if(be>=F[fi])ps[P.st[k].id].joint[F[fi]]++;
+            }
+          }
+        }
+        F.forEach(function(f){if(best>=f)ok[f]++;if(bestEligible>=f)jointOk[f]++});
+        blocks.forEach(function(b){cqEnd[b]+=cq[b];if(cq[b]>0)quotaOpen[b]++});
+        leftEnd+=remaining;
+        var got=false;for(var ri=0;ri<rk.length;ri++){
+          var kk=rk[ri][0];if(free[kk][rk[ri][1]]&&cq[P.st[kk].b]>=1){
+            pickCnt[ri]++;got=true;break;
+          }
+        }
+        if(!got)noPick++;
+      }
+            if(remaining<=0)break;
       if(r()<d)continue;
-      var chinese=r()<o.cShare,closed=null;
+      var chinese=r()<o.chineseShare,closed=null;
       if(chinese){closed=CL;for(k=0;k<K;k++)CL[k]=cq[P.st[k].b]>=1?0:1}
       var p=pick(P,a,lam,free,sum,r,closed);if(!p)continue;
       remaining--;if(chinese)cq[P.st[p[0]].b]--;
@@ -196,12 +218,12 @@ function forecast(o){
     F.forEach(function(f){if(lastTaken[f]!=null)run[f].push(lastTaken[f])});
   }
   function qtl(x,p){if(!x.length)return null;x=x.slice().sort(function(m,n){return m-n});return x[Math.min(x.length-1,Math.floor(p*x.length))]}
-  var out={sims:S,lam:lam,chanceByFloor:{},runOutByFloor:{},perStack:{},cqAtTurn:{},unitsLeftAtTurn:leftEnd/S,survive:{},pick:{},noPick:noPick/S};
+  var out={sims:S,lam:lam,chanceByFloor:{},jointChanceByFloor:{},runOutByFloor:{},perStack:{},cqAtTurn:{},quotaOpen:{},unitsLeftAtTurn:leftEnd/S,survive:{},joint:{},pick:{},noPick:noPick/S};
   rkKey.forEach(function(key,i){if(pickCnt[i])out.pick[key]=pickCnt[i]/S});
-  F.forEach(function(f){out.chanceByFloor[f]=ok[f]/S;out.runOutByFloor[f]={p10:qtl(run[f],.1),p50:qtl(run[f],.5),p90:qtl(run[f],.9)}});
-  for(var id in ps){out.perStack[id]={chanceByFloor:{},topMedian:qtl(ps[id].top,.5),topP90:qtl(ps[id].top,.9)};F.forEach(function(f){out.perStack[id].chanceByFloor[f]=ps[id].ok[f]/S})}
-  blocks.forEach(function(b){out.cqAtTurn[b]=cqEnd[b]/S});
-  P.st.forEach(function(x,k2){x.units.forEach(function(u,j2){out.survive[u.b+'-'+u.s+'-'+u.f]=u.t?0:surv[k2][j2]/S})});
+  F.forEach(function(f){out.chanceByFloor[f]=ok[f]/S;out.jointChanceByFloor[f]=jointOk[f]/S;out.runOutByFloor[f]={p10:qtl(run[f],.1),p50:qtl(run[f],.5),p90:qtl(run[f],.9)}});
+  for(var id in ps){out.perStack[id]={chanceByFloor:{},jointChanceByFloor:{},topMedian:qtl(ps[id].top,.5),topP90:qtl(ps[id].top,.9)};F.forEach(function(f){out.perStack[id].chanceByFloor[f]=ps[id].ok[f]/S;out.perStack[id].jointChanceByFloor[f]=ps[id].joint[f]/S})}
+  blocks.forEach(function(b){out.cqAtTurn[b]=cqEnd[b]/S;out.quotaOpen[b]=quotaOpen[b]/S});
+  P.st.forEach(function(x,k2){x.units.forEach(function(u,j2){var id=u.b+'-'+u.s+'-'+u.f;out.survive[id]=u.t?0:surv[k2][j2]/S;out.joint[id]=u.t?0:joint[k2][j2]/S})});
   return out}
 var LAMS=[0,0.25,0.5,0.75,1];
 /* ctx: units, lastQ, queue, drops, cShare, cq, targets, snaps:[{n, taken:{block:count}}] (earlier block snapshots) */
@@ -209,22 +231,25 @@ function runLambda(ctx,lam,opt){
   opt=opt||{};var sizes=ctx.snaps.map(function(s){return s.n});
   var cal=calibrate(ctx.units,ctx.par||learnFloor(ctx.units),lam,sizes,{sims:opt.calSims||60,rounds:opt.rounds||8});
   var loss=0;ctx.snaps.forEach(function(s,i){for(var b in s.taken){var m=cal.snaps[i][b]||0;loss+=(m-s.taken[b])*(m-s.taken[b])/(m+1)}});
-  var fc=forecast({cal:cal,lastQ:ctx.lastQ,queue:ctx.queue,drops:ctx.drops,called:ctx.lastQ,cShare:ctx.cShare,cq:ctx.cq,targets:ctx.targets,ranked:ctx.ranked,sims:opt.sims||250,seed:462+Math.round(lam*100)});
-  return {lam:lam,loss:loss,fc:fc}
+  var base={cal:cal,lastQ:ctx.lastQ,queue:ctx.queue,drops:ctx.drops,called:ctx.lastQ,caps:ctx.caps,bookedByBlock:ctx.bookedByBlock,targets:ctx.targets,ranked:ctx.ranked,seed:462+Math.round(lam*100)};
+  function sim(share,n){return forecast(Object.assign({},base,{chineseShare:share,sims:n}))}
+  return {lam:lam,loss:loss,fc:sim(ctx.shares.reference,opt.sims||200),low:sim(ctx.shares.low,opt.edgeSims||100),high:sim(ctx.shares.high,opt.edgeSims||100)}
 }
 /* Average the runs, weighting each LOYALTY value by how well its replay matched the earlier snapshots. */
 function combine(runs){
   var best=Math.min.apply(null,runs.map(function(x){return x.loss})),w=runs.map(function(x){return Math.exp(-(x.loss-best)/2)}),W=w.reduce(function(a,b){return a+b},0);
   w=w.map(function(x){return x/W});
   function avg(get){var t=0;runs.forEach(function(x,i){t+=w[i]*get(x.fc)});return t}
+  function scenario(kind,get){var t=0;runs.forEach(function(x,i){t+=w[i]*get(x[kind])});return t}
+  function spread(get){var a=['low','fc','high'].map(function(kind){return scenario(kind,get)});return [Math.min.apply(null,a),Math.max.apply(null,a)]}
   function rng(get){var v=runs.map(function(x){return get(x.fc)});return [Math.min.apply(null,v),Math.max.apply(null,v)]}
-  var o={weights:runs.map(function(x,i){return {lam:x.lam,w:w[i],loss:x.loss}}),chance:{},range:{},runOut:{},perStack:{},cqAtTurn:{},survive:{}},f0=runs[0].fc;
-  Object.keys(f0.chanceByFloor).forEach(function(f){o.chance[f]=avg(function(c){return c.chanceByFloor[f]});o.range[f]=rng(function(c){return c.chanceByFloor[f]});
+  var o={weights:runs.map(function(x,i){return {lam:x.lam,w:w[i],loss:x.loss}}),chance:{},jointChance:{},jointRange:{},range:{},runOut:{},perStack:{},cqAtTurn:{},quotaOpen:{},quotaRange:{},survive:{},joint:{},conditionalEligibility:{},jointUnitRange:{}},f0=runs[0].fc;
+  Object.keys(f0.chanceByFloor).forEach(function(f){o.chance[f]=avg(function(c){return c.chanceByFloor[f]});o.jointChance[f]=avg(function(c){return c.jointChanceByFloor[f]});o.jointRange[f]=spread(function(c){return c.jointChanceByFloor[f]});o.range[f]=rng(function(c){return c.chanceByFloor[f]});
     var ro=runs.map(function(x){return x.fc.runOutByFloor[f]}).filter(function(v){return v.p50!=null});
     o.runOut[f]=ro.length===runs.length?{lo:Math.min.apply(null,ro.map(function(v){return v.p10})),mid:Math.round(avg(function(c){return c.runOutByFloor[f].p50})),hi:Math.max.apply(null,ro.map(function(v){return v.p90}))}:null});
-  Object.keys(f0.perStack).forEach(function(id){o.perStack[id]={chance:{},top:Math.round(avg(function(c){return c.perStack[id].topMedian}))};Object.keys(f0.chanceByFloor).forEach(function(f){o.perStack[id].chance[f]=avg(function(c){return c.perStack[id].chanceByFloor[f]})})});
-  Object.keys(f0.cqAtTurn).forEach(function(b){o.cqAtTurn[b]=avg(function(c){return c.cqAtTurn[b]})});
-  Object.keys(f0.survive).forEach(function(u){o.survive[u]=Math.round(100*avg(function(c){return c.survive[u]}))/100});
+  Object.keys(f0.perStack).forEach(function(id){o.perStack[id]={chance:{},joint:{},top:Math.round(avg(function(c){return c.perStack[id].topMedian}))};Object.keys(f0.chanceByFloor).forEach(function(f){o.perStack[id].chance[f]=avg(function(c){return c.perStack[id].chanceByFloor[f]});o.perStack[id].joint[f]=avg(function(c){return c.perStack[id].jointChanceByFloor[f]})})});
+  Object.keys(f0.cqAtTurn).forEach(function(b){o.cqAtTurn[b]=avg(function(c){return c.cqAtTurn[b]});o.quotaOpen[b]=avg(function(c){return c.quotaOpen[b]});o.quotaRange[b]=spread(function(c){return c.quotaOpen[b]})});
+  Object.keys(f0.survive).forEach(function(u){o.survive[u]=avg(function(c){return c.survive[u]});o.joint[u]=Math.min(o.survive[u],avg(function(c){return c.joint[u]}));o.conditionalEligibility[u]=o.survive[u]>0?o.joint[u]/o.survive[u]:null;o.jointUnitRange[u]=spread(function(c){return c.joint[u]})});
   o.pick={};runs.forEach(function(x,i){for(var key in x.fc.pick)o.pick[key]=(o.pick[key]||0)+w[i]*x.fc.pick[key]});
   for(var pk in o.pick)o.pick[pk]=Math.round(1000*o.pick[pk])/1000;
   return o}

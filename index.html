@@ -317,7 +317,7 @@ var cap={},snap=S.quotaSnap,hist=S.blockHistory,hSnap=null,hNow=hist[hist.length
 hist.forEach(function(h){if(h.d===snap.d)hSnap=h});
 var nowTaken={},unitsIn={};blocks.forEach(function(b){nowTaken[b]=0;unitsIn[b]=0});
 U.units.forEach(function(u){unitsIn[u.b]++;if(u.t)nowTaken[u.b]++});
-blocks.forEach(function(b){cap[b]=Math.ceil(.84*unitsIn[b])});
+blocks.forEach(function(b){cap[b]=S.quotaModel.chineseCap[b];if(!Number.isInteger(cap[b]))throw Error('Official quota missing '+b)});
 var capTot=sum(blocks,function(b){return cap[b]});
 var cSnapTaken=sum(blocks,function(b){return cap[b]-snap.left[b].C}),uSnapTaken=sum(blocks,function(b){return hSnap?hSnap.taken[b]:0});
 var cShare=uSnapTaken?cSnapTaken/uSnapTaken:.85;
@@ -332,20 +332,21 @@ U.units.forEach(function(u){var id=u.b+'-'+u.s;if(!stacks[id]){stacks[id]={b:u.b
 var TARGETS=(S.meta.targetStacks||[]).filter(function(id){return stacks[id]}),isMine={};TARGETS.forEach(function(id){isMine[id]=1});
 var R=null,nTaken=U.units.filter(function(u){return u.t}).length,cqInt={};blocks.forEach(function(b){cqInt[b]=Math.max(0,Math.round(cNow[b]))});
 var RANK=(S.meta.prefs&&window.BRModel)?BRModel.rank(U.units,S.meta.prefs):[];
-var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,cShare:cShare,cq:cqInt,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
+var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,caps:cap,shares:S.quotaModel.scenarios,bookedByBlock:nowTaken,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
   par:window.BRModel?BRModel.learnFloor(U.units):null,
   snaps:hist.map(function(h){return {n:sum(blocks,function(b){return h.taken[b]||0}),taken:h.taken}}).filter(function(s){return s.n>0&&s.n<nTaken})};
 var sig=window.BRModel?BRModel.cacheKey(U,S):null;
 function runModel(done){
   if(called||!window.BRModel)return done();
-  try{var c=JSON.parse(localStorage.getItem('br-model-v5')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
+  try{var c=JSON.parse(localStorage.getItem('br-model-v6')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
   var runs=[],i=0,LAMS=BRModel.LAMS;
   (function step(){
     if(i<LAMS.length){$('t-chance-s').textContent='Working it out, step '+(i+1)+' of '+LAMS.length+'…';setTimeout(function(){runs.push(BRModel.runLambda(ctx,LAMS[i++]));step()},30)}
-    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model-v5',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
+    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model-v6',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
   })();
 }
 function sv(u){return R?(R.survive[u.b+'-'+u.s+'-'+u.f]||0):null}
+function eligible(u){return R?(R.joint[u.b+'-'+u.s+'-'+u.f]||0):null}
 function pct(x){return x<.005?'<1%':x>.995?'>99%':Math.round(x*100)+'%'}
 function fl(f){return '#'+(f<10?'0':'')+f}
 function stackList(){var n=TARGETS.map(function(id){return id.split('-')[1]});return n.length>1?n.slice(0,-1).join(', ')+' and '+n[n.length-1]:n.join('')}

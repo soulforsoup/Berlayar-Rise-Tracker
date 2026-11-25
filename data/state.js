@@ -945,5 +945,22 @@ window.BR_STATE={
     "finalDropout": 0.14,
     "src": "figures shown in the tracker in your video; not independently verified"
   },
-  "apptsAsOf": "2026-11-25"
+  "apptsAsOf": "2026-11-25",
+  "quotaModel": {
+    "chineseCap": {
+      "200A": 145,
+      "200B": 152,
+      "201A": 155,
+      "201B": 145,
+      "204A": 128,
+      "204B": 108
+    },
+    "scenarios": {
+      "low": 0.7,
+      "reference": 0.85,
+      "high": 0.95
+    },
+    "source": "HDB June 2026 Bukit Merah 4-room flat price list, updated 29 July 2026",
+    "caveat": "Current Chinese quota usage is unknown. 70%, 85% and 95% are illustrative assumptions about Chinese share of bookings, not observed frequencies or statistical confidence intervals."
+  }
 };

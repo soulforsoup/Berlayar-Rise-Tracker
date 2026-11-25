@@ -9,49 +9,116 @@ window.BR_STATE={
     "unitsAsOf": "2026-11-24",
     "note": "Unit availability and queue log through 24 Nov 2026; future appointment dates are community/applicant reports.",
     "targetStacks": [
-      "201B-149",
-      "201B-151",
-      "204A-100",
-      "204A-102",
-      "204B-116",
-      "204B-118"
+      "201A-141",
+      "201A-143",
+      "200A-109",
+      "200A-111",
+      "200B-125",
+      "200B-127"
     ],
     "prefs": {
       "budget": 751600,
       "groups": [
         {
           "id": "six",
-          "label": "Long shot: your six stacks, floor 12 up"
+          "label": "Your top six: 141, 143, 109, 111, 125, 127 (floor 12+)"
         },
         {
-          "id": "first",
-          "label": "First choices: 200A · 109, then 204A · 106"
+          "id": "backup",
+          "label": "Your previous six stacks as backups (floor 12+)"
         },
         {
-          "id": "next",
-          "label": "Next: 141, 104, 127, 122, 155, 125 (floor 18 up)"
-        },
-        {
-          "id": "highway",
-          "label": "Highway-facing: 115, 113, 147, 145, 131, 129"
-        },
-        {
-          "id": "last",
-          "label": "Street-side or close-facing: 111, 120, 143, 153"
+          "id": "other",
+          "label": "Other previously ranked stacks (floor 18+)"
         },
         {
           "id": "mid",
-          "label": "Floors 12 to 17 in the same stacks"
+          "label": "Floors 12–17 in other backup stacks"
         },
         {
           "id": "low",
-          "label": "Any stack, floor 11 and below"
+          "label": "Floors 11 and below"
         }
       ],
-      "note": "Order used: Claude's ranking of 16 Nov, within your $751,600 limit. Your six stacks come first, then stack 109 at #25, #24, #23, stack 106 at #23, #25, #24, and so on down the list, each stack from its best floor down to #18. Floors 12 to 17 follow in the same stack order, then floor 11 and below. Stacks with few or no bookings so far give the model little to go on, so treat a very high chance there as soft.",
+      "note": "Preference order updated 25 Nov 2026: 201A-141, 201A-143, 200A-109, 200A-111, 200B-125, 200B-127; all six ranked by stack first, floors 12+ within the existing S$751,600 budget and with previously specified floor orders retained. Your prior six target stacks follow as backups, then the other previously ranked stacks, then lower floors. Physical availability and Chinese eligibility are estimates.",
       "steps": [
         {
           "grp": "six",
+          "stacks": [
+            "201A-141"
+          ],
+          "min": 12,
+          "floors": [
+            30,
+            28,
+            27,
+            26,
+            24,
+            23
+          ]
+        },
+        {
+          "grp": "six",
+          "stacks": [
+            "201A-143"
+          ],
+          "min": 12,
+          "floors": [
+            30,
+            28,
+            27
+          ]
+        },
+        {
+          "grp": "six",
+          "stacks": [
+            "200A-109"
+          ],
+          "min": 12,
+          "floors": [
+            25,
+            24,
+            23
+          ]
+        },
+        {
+          "grp": "six",
+          "stacks": [
+            "200A-111"
+          ],
+          "min": 12,
+          "floors": [
+            25,
+            24,
+            23
+          ]
+        },
+        {
+          "grp": "six",
+          "stacks": [
+            "200B-125"
+          ],
+          "min": 12,
+          "floors": [
+            25,
+            24,
+            23
+          ]
+        },
+        {
+          "grp": "six",
+          "stacks": [
+            "200B-127"
+          ],
+          "min": 12,
+          "floors": [
+            25,
+            24,
+            23
+          ]
+        },
+        {
+          "grp": "backup",
           "stacks": [
             "204A-100"
           ],
@@ -71,7 +138,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "six",
+          "grp": "backup",
           "stacks": [
             "204A-102"
           ],
@@ -91,7 +158,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "six",
+          "grp": "backup",
           "stacks": [
             "201B-151"
           ],
@@ -110,7 +177,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "six",
+          "grp": "backup",
           "stacks": [
             "204B-116"
           ],
@@ -128,7 +195,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "six",
+          "grp": "backup",
           "stacks": [
             "204B-118"
           ],
@@ -146,7 +213,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "six",
+          "grp": "backup",
           "stacks": [
             "201B-149"
           ],
@@ -165,19 +232,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "first",
-          "stacks": [
-            "200A-109"
-          ],
-          "min": 18,
-          "floors": [
-            25,
-            24,
-            23
-          ]
-        },
-        {
-          "grp": "first",
+          "grp": "other",
           "stacks": [
             "204A-106"
           ],
@@ -189,22 +244,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "next",
-          "stacks": [
-            "201A-141"
-          ],
-          "min": 18,
-          "floors": [
-            30,
-            28,
-            27,
-            26,
-            24,
-            23
-          ]
-        },
-        {
-          "grp": "next",
+          "grp": "other",
           "stacks": [
             "204A-104"
           ],
@@ -216,19 +256,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "next",
-          "stacks": [
-            "200B-127"
-          ],
-          "min": 18,
-          "floors": [
-            25,
-            24,
-            23
-          ]
-        },
-        {
-          "grp": "next",
+          "grp": "other",
           "stacks": [
             "204B-122"
           ],
@@ -240,7 +268,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "next",
+          "grp": "other",
           "stacks": [
             "201B-155"
           ],
@@ -252,19 +280,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "next",
-          "stacks": [
-            "200B-125"
-          ],
-          "min": 18,
-          "floors": [
-            25,
-            24,
-            23
-          ]
-        },
-        {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "200A-115"
           ],
@@ -276,7 +292,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "200A-113"
           ],
@@ -288,7 +304,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "201A-147"
           ],
@@ -300,7 +316,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "201A-145"
           ],
@@ -312,7 +328,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "200B-131"
           ],
@@ -324,7 +340,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "highway",
+          "grp": "other",
           "stacks": [
             "200B-129"
           ],
@@ -336,19 +352,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "last",
-          "stacks": [
-            "200A-111"
-          ],
-          "min": 18,
-          "floors": [
-            25,
-            24,
-            23
-          ]
-        },
-        {
-          "grp": "last",
+          "grp": "other",
           "stacks": [
             "204B-120"
           ],
@@ -360,19 +364,7 @@ window.BR_STATE={
           ]
         },
         {
-          "grp": "last",
-          "stacks": [
-            "201A-143"
-          ],
-          "min": 18,
-          "floors": [
-            30,
-            28,
-            27
-          ]
-        },
-        {
-          "grp": "last",
+          "grp": "other",
           "stacks": [
             "201B-153"
           ],
@@ -386,23 +378,17 @@ window.BR_STATE={
         {
           "grp": "mid",
           "stacks": [
-            "200A-109",
             "204A-106",
-            "201A-141",
             "204A-104",
-            "200B-127",
             "204B-122",
             "201B-155",
-            "200B-125",
             "200A-115",
             "200A-113",
             "201A-147",
             "201A-145",
             "200B-131",
             "200B-129",
-            "200A-111",
             "204B-120",
-            "201A-143",
             "201B-153"
           ],
           "min": 12,
@@ -411,29 +397,29 @@ window.BR_STATE={
         {
           "grp": "low",
           "stacks": [
+            "201A-141",
+            "201A-143",
+            "200A-109",
+            "200A-111",
+            "200B-125",
+            "200B-127",
+            "201B-149",
+            "201B-151",
             "204A-100",
             "204A-102",
-            "201B-151",
             "204B-116",
             "204B-118",
-            "201B-149",
-            "200A-109",
             "204A-106",
-            "201A-141",
             "204A-104",
-            "200B-127",
             "204B-122",
             "201B-155",
-            "200B-125",
             "200A-115",
             "200A-113",
             "201A-147",
             "201A-145",
             "200B-131",
             "200B-129",
-            "200A-111",
             "204B-120",
-            "201A-143",
             "201B-153"
           ],
           "max": 11

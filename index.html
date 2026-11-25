@@ -144,7 +144,7 @@ a{color:var(--accent)}
 
 <section class="card answers" aria-label="Summary">
   <div class="ans lead"><span class="k" id="appt-label">Est. appointment</span><span class="v" id="t-appt"></span><span class="s" id="t-appt-s"></span></div>
-  <div class="ans"><span class="k">Most likely pick</span><span class="v" id="t-pick">…</span><span class="s" id="t-pick-s">Working it out…</span></div>
+  <div class="ans"><span class="k">Modelled pick</span><span class="v" id="t-pick">…</span><span class="s" id="t-pick-s">Working it out…</span></div>
   <div class="ans"><span class="k" id="t-chance-k">Floor 12+ in your six stacks</span><span class="v" id="t-chance">…</span><span class="s" id="t-chance-s">Working it out…</span></div>
   <div class="ans"><span class="k">Units left at your turn</span><span class="v" id="t-left"></span><span class="s" id="t-left-s"></span></div>
 </section>
@@ -255,9 +255,9 @@ a{color:var(--accent)}
     <ul class="small">
       <li><b>From the sheet:</b> prices, taken units, last queue number, units taken and drop-outs per day. Source: <a href="https://docs.google.com/spreadsheets/d/1uhp9A37zBUt58wJSPYxYXBc1kjjOq-glPlmHF1Vn5B0/edit">berlayar_rise_chart_Public</a>.</li>
       <li id="about-quota"></li>
-      <li><b>Projection at your turn:</b> a model replays the bookings so far to learn how strongly each stack is favoured and how fast its floors go from the top down. It then plays out the queue ahead of you about 1,250 times with random drop-outs and the Chinese quota of each block. The result is averaged over five assumptions about how loyal buyers stay to a favoured stack once only lower floors remain. One earlier snapshot barely tells them apart, which is why the ranges are wide.</li>
+      <li><b>Projection at your turn:</b> a model learns stack and floor demand from bookings, then simulates future choices with random drop-outs and three assumed Chinese-quota usage scenarios. The result is averaged over five assumptions about how loyal buyers stay to a favoured stack once only lower floors remain. One earlier snapshot barely tells them apart, which is why the ranges are wide.</li>
       <li id="about-floor"></li>
-      <li><b>Appointment date:</b> uses community reports and estimates beyond the latest shared date. Bookings are separately recorded through 20 November.</li>
+      <li><b>Appointment date:</b> queue 462 has a user-reported 9 December, 3:15 pm appointment; other dates use community reports or forecasts. Bookings are updated separately.</li>
       <li id="about-redhill"></li>
     </ul>
   </div>
@@ -405,19 +405,25 @@ function drawMine(){
   $('run-end').textContent=total+' units';$('k-done').textContent=lastQ;$('k-sent').textContent=sentTo;
   $('q-text').textContent=called?'Your number has been called.':actualAppt?ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Your reported flat-selection appointment is '+fd(actualAppt.date,true)+' at '+actualAppt.time+' (queue '+Q+').':ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Based on community reports through queue '+latestReport.q+' on '+fd(latestReport.date)+', your estimated appointment is '+fd(apptDate,true)+'. Beyond shared appointments the forecast assumes roughly '+recentPace+' queue numbers per working day.';
   $('h-queue').textContent=called?'Your number has been called':ahead+' numbers ahead of you';
-  $('q-sure').textContent=(leftWorst>0&&cWorst>0)?'A unit of some kind is effectively certain: even if nobody ahead drops out and all are Chinese, '+leftWorst+' units and '+cWorst+' Chinese-quota places remain.':'';
+  $('q-sure').textContent=leftWorst>0?'At least '+leftWorst+' units remain estate-wide if everyone ahead books; this does not guarantee Chinese eligibility in any particular block.':'';
   $('q-check').textContent=future?future+' future community appointment reports recorded. x represents a ten-number band, not an exact queue number.':'';
 })();
 
-/* ---- blocks ---- */
+/* ---- Chinese quota sensitivity, not an observed ethnicity count ---- */
 function drawBlocks(){var box=$('blk-rows');box.textContent='';
-  blocks.forEach(function(b){var left=unitsIn[b]-nowTaken[b],pl=R?sum(U.units.filter(function(u){return u.b===b&&!u.t}),sv):null,pc=R?R.cqAtTurn[b]:null,pill=null;
-    if(R){var p=pc<1?['crit','Chinese quota likely gone']:pc<15?['warn','Chinese quota tight']:['good','Projected open'];pill=el('span','pill '+p[0],p[1])}
-    box.appendChild(row('Blk '+b,[left+' units left now','Chinese quota: about '+Math.round(cNow[b])+' now'+(R?', about '+Math.round(pc)+' at your turn':'')],R?'≈'+Math.round(pl):'…','left at your turn',pill))});
-  $('h-blocks').textContent=(total-nTaken)+' units left today';
-  $('blk-note').textContent='Each block has its own Chinese limit of 84% of its 4-room units, so a block can close to Chinese buyers while units are still left in it. "Now" starts from the HDB quota figures of '+fd(snap.d)+' and assumes '+Math.round(cShare*100)+'% of bookings since then were Chinese, the share up to that date.';
+  blocks.forEach(function(b){
+    var left=unitsIn[b]-nowTaken[b],physical=R?sum(U.units.filter(function(u){return u.b===b&&!u.t}),sv):null,
+        joint=R?sum(U.units.filter(function(u){return u.b===b&&!u.t}),eligible):null,
+        chance=R?R.quotaOpen[b]:null,band=R?R.quotaRange[b]:null;
+    box.appendChild(row('Blk '+b,[left+' physically unbooked now; official Chinese cap '+cap[b],
+      'At least '+Math.max(0,cap[b]-nowTaken[b])+' quota slots remain now, even if every booking were Chinese',
+      R?'At queue '+Q+': ≈'+Math.round(physical)+' physically free and ≈'+Math.round(joint)+' jointly free AND eligible (assumed 85% case)':null,
+      R?'Quota-open sensitivity: '+pct(band[0])+' to '+pct(band[1]):null],
+      R?pct(chance):'…','assumed quota-open chance'));
+  });
+  $('h-blocks').textContent=(total-nTaken)+' physically unbooked now';
+  $('blk-note').textContent='Official HDB Chinese caps, 29 July 2026: 200A 145, 200B 152, 201A 155, 201B 145, 204A 128, 204B 108. Current ethnic quota use is unknown. Scenario assumptions are 70%, 85% and 95% Chinese shares of past and future bookings, not measured frequencies or statistical confidence intervals.';
 }
-
 /* ---- unit map ---- */
 var VIEW={'204A':{'100':'sea','102':'sea'},'204B':{'116':'sea','118':'sea'},'200A':{'109':'sea','111':'sea','113':'park side','115':'park side'},'200B':{'125':'sea, part','127':'sea, part','129':'park side','131':'park side'},'201A':{'145':'park side','147':'park side'}};
 (function(){var seg=$('blk-seg');blocks.forEach(function(b){var bt=el('button',null,b);bt.type='button';bt.addEventListener('click',function(){curBlock=b;drawMap()});seg.appendChild(bt)});
@@ -433,11 +439,11 @@ function drawMap(){
   B.stacks.forEach(function(s){var st=stacks[curBlock+'-'+s],h=el('div','hd'+(isMine[curBlock+'-'+s]?' mine':''));h.appendChild(el('b',null,s));h.appendChild(document.createTextNode(((VIEW[curBlock]||{})[s]||'not assessed')));h.appendChild(document.createElement('br'));h.appendChild(el('span','muted num',st.tk+'/'+st.units.length+' taken'));m.appendChild(h)});
   for(var f=maxF;f>=2;f--){m.appendChild(el('div','fl',fl(f)));
     B.stacks.forEach(function(s){var u=by[f+'-'+s],c;
-      if(!u)c=el('div','u none','no unit');else{var p=sv(u);c=el('div','u '+(u.t?'tk':(show&&p<.5?'gone':'av'))+(f<minFloor?' low':''),k(u.p));c.title='Blk '+u.b+' '+fl(f)+'-'+s+' · $'+u.p.toLocaleString('en-SG')+(u.t?' · taken':(R?' · '+pct(p)+' chance still free at your turn':' · available'))}
+      if(!u)c=el('div','u none','no unit');else{var p=sv(u),e=eligible(u);c=el('div','u '+(u.t?'tk':(show&&p<.5?'gone':'av'))+(f<minFloor?' low':''),k(u.p));c.title='Blk '+u.b+' '+fl(f)+'-'+s+' · $'+u.p.toLocaleString('en-SG')+(u.t?' · taken':(R?' · '+pct(p)+' physically free; '+pct(e)+' jointly free AND Chinese-eligible (assumed 85% share)':' · available now'))}
       m.appendChild(c)})}
   var av=U.units.filter(function(u){return u.b===curBlock&&!u.t&&u.f>=minFloor}),then=av.filter(function(u){return R&&sv(u)>=.5});
   var cheap=then.slice().sort(function(a,b){return a.p-b.p})[0];
-  $('u-sum').textContent='Blk '+curBlock+': '+av.length+' units on floor '+minFloor+' and up are available now'+(R?'; about '+Math.round(sum(av,sv))+' are projected to be left at your turn'+(cheap?', from '+k(cheap.p)+' ('+fl(cheap.f)+'-'+cheap.s+')':'')+'. Chinese quota here: about '+Math.round(cNow[curBlock])+' now, about '+Math.round(R.cqAtTurn[curBlock])+' at your turn.':'.')+(TARGETS.some(function(id){return id.indexOf(curBlock+'-')===0})?' Your stacks are underlined.':'');
+  $('u-sum').textContent='Blk '+curBlock+': '+av.length+' physically unbooked units on floor '+minFloor+'+ now'+(R?'; ≈'+Math.round(sum(av,sv))+' physically free and ≈'+Math.round(sum(av,eligible))+' jointly free AND Chinese-eligible at your turn (assumed 85% share)':'')+'. Current ethnic quota usage is unknown.';
 }
 
 /* ---- charts ---- */
@@ -475,13 +481,13 @@ function drawDrop(){var box=$('ch-drop'),old=box.querySelector('svg');if(old)old
   box.appendChild(svg)}
 
 /* ---- text + tables ---- */
-$('race-note').textContent='By race up to '+fd(snap.d)+': Chinese '+cSnapTaken+', Malay '+sum(blocks,function(b){return Math.ceil(.22*unitsIn[b])-snap.left[b].M})+', Indian/Others '+sum(blocks,function(b){return Math.ceil(.12*unitsIn[b])-snap.left[b].IO})+' of '+uSnapTaken+' bookings. A day-by-day race split needs HDB quota figures, which this tracker cannot read automatically yet.';
+$('race-note').textContent='Ethnicity of currently booked flats is not publicly known. The older 10 November quota snapshot is retained for historical reference but is not used as a live quota measurement. Assumed ethnic mixes drive the scenarios.';
 $('d-text').textContent=drops+' of the first '+lastQ+' queue numbers did not book ('+(dRate*100).toFixed(1)+'%). Every drop-out ahead of you leaves one more unit when your turn comes.';
 $('d-note').textContent='For your number the drop-out rate changes how many units are left ('+leftWorst+' to '+Math.round(leftRh)+'), not whether you get one.';
 (function(){var tb=$('ap-table').tBodies[0];S.appts.forEach(function(a){var tr=el('tr');['Q'+a.q,fd(a.date,true),a.time||'—',a.posted?fd(a.posted):'Not supplied'].forEach(function(v){tr.appendChild(el('td',null,v))});tb.appendChild(tr)});
   $('ap-note').textContent='Community-reported scheduled appointments, not completed bookings. x masks the final digit. Duplicate reports have been consolidated. The 18 Nov community summary overlaps 17 Nov; the booking log retains the previously recorded non-overlapping range. '+S.apptsSrc;
   var lt=$('log-table').tBodies[0];days.slice().reverse().forEach(function(d){var tr=el('tr');[fd(d.d),d.from+'–'+d.to,d.booked,d.drop,d.left].forEach(function(v){tr.appendChild(el('td',null,v))});lt.appendChild(tr)});
-  $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('limits are 84% of each block\'s 4-room units, rounded up ('+capTot+' in total). These limits match the '+fd(snap.d)+' quota figures ('+snap.src+') exactly in all six blocks. Figures after that date are estimates until a newer HDB reading is added.'));
+  $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('Official original HDB caps total '+capTot+' across six blocks. Live ethnic quota use is unknown. The model separates physical availability from Chinese eligibility under three illustrative assumed booking shares (70%, 85%, 95%), not statistical confidence bounds.'));
   $('about-floor').appendChild(el('b',null,'Floor preference model: '));
   $('about-floor').appendChild(document.createTextNode(ctx.par?(ctx.par.method==='hybrid'?'Learnt from '+ctx.par.booked+' booked units in '+ctx.par.stacks+' informative stacks, with a conservative prior. ':'Using a conservative prior until enough bookings are available. ')+ 'Estimated relative weight: '+Math.exp(ctx.par.floor).toFixed(1)+'× for 10 floors higher and '+Math.exp(ctx.par.top2).toFixed(1)+'× extra for the top two floors. This does not isolate price or view effects.':'Not loaded.'));
   $('about-redhill').appendChild(el('b',null,'Redhill Peaks (Feb 2026): '));$('about-redhill').appendChild(document.createTextNode('Chinese limit '+S.redhill.chineseCap+' of '+S.redhill.units+' units, quota ran out near queue '+S.redhill.quotaOutQueue+', about '+Math.round(S.redhill.finalDropout*100)+'% dropped out by the end. These are '+S.redhill.src+'.'));

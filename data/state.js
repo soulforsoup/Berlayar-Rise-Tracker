@@ -5,9 +5,9 @@ window.BR_STATE={
     "queue": 462,
     "ethnicity": "Chinese",
     "minFloor": 12,
-    "lastChecked": "2026-11-25T16:56:00+08:00",
+    "lastChecked": "2026-11-25T22:19:00+08:00",
     "unitsAsOf": "2026-11-25",
-    "note": "25 Nov provisional update: queue log shows 285 called but its booked and drop-out columns are not filled. The 266 taken flats are identified from the colour-coded unit grid; 19 cumulative non-bookings are implied, not confirmed drop-outs.",
+    "note": "25 Nov 2026 final sheet figures: 285 queue numbers called, 271 booked, 14 cumulative drop-outs; unit availability reconciled to all 988 colour-coded flats.",
     "targetStacks": [
       "201A-141",
       "201A-143",
@@ -534,10 +534,10 @@ window.BR_STATE={
     {
       "d": "2026-11-25",
       "last": 285,
-      "taken": 266,
+      "taken": 271,
       "appts": 15,
-      "provisional": true,
-      "note": "Provisional 25 Nov snapshot. Last queue number 285 is in queue log; 266 booked flats are colour-coded in 4-Room Price Chart. 25 Nov booked/drop-out cells are empty. Derived 19 non-bookings are not confirmed drop-outs."
+      "provisional": false,
+      "source": "Completed 25 Nov 2026 Queue log; 271 booked flats confirmed by matching colour-coded 4-Room Price Chart"
     }
   ],
   "blockHistory": [
@@ -627,16 +627,16 @@ window.BR_STATE={
     },
     {
       "d": "2026-11-25",
-      "src": "4-Room Price Chart, provisional colour-coded booked flats",
+      "src": "Completed 25 Nov 2026 4-Room Price Chart, colour-coded booked flats",
       "taken": {
-        "200A": 27,
-        "200B": 9,
-        "201A": 33,
+        "200A": 28,
+        "200B": 10,
+        "201A": 36,
         "201B": 80,
         "204A": 64,
         "204B": 53
       },
-      "provisional": true
+      "provisional": false
     }
   ],
   "quotaSnap": {

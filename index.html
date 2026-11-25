@@ -312,25 +312,21 @@ var smsDate=lead==null?null:iso(new Date(D(apptDate).getTime()-lead*864e5));
 var sentTo=latestBand[1];
 var future=reports.filter(function(a){return a.date>L.d}).length;
 
-/* ---- quota ---- */
-var cap={},snap=S.quotaSnap,hist=S.blockHistory,hSnap=null,hNow=hist[hist.length-1];
-hist.forEach(function(h){if(h.d===snap.d)hSnap=h});
-var nowTaken={},unitsIn={};blocks.forEach(function(b){nowTaken[b]=0;unitsIn[b]=0});
+/* ---- quota: official caps, unknown ethnic usage ---- */
+var cap=S.quotaModel.chineseCap,hist=S.blockHistory;
+var nowTaken={},unitsIn={};
+blocks.forEach(function(b){nowTaken[b]=0;unitsIn[b]=0;if(!Number.isInteger(cap[b]))throw Error('Missing official Chinese cap '+b)});
 U.units.forEach(function(u){unitsIn[u.b]++;if(u.t)nowTaken[u.b]++});
-blocks.forEach(function(b){cap[b]=S.quotaModel.chineseCap[b];if(!Number.isInteger(cap[b]))throw Error('Official quota missing '+b)});
 var capTot=sum(blocks,function(b){return cap[b]});
-var cSnapTaken=sum(blocks,function(b){return cap[b]-snap.left[b].C}),uSnapTaken=sum(blocks,function(b){return hSnap?hSnap.taken[b]:0});
-var cShare=uSnapTaken?cSnapTaken/uSnapTaken:.85;
-var cNow={},cMin={};blocks.forEach(function(b){var dlt=Math.max(0,nowTaken[b]-(hSnap?hSnap.taken[b]:0));cNow[b]=snap.left[b].C-dlt*cShare;cMin[b]=snap.left[b].C-dlt});
 var ahead=Math.max(0,Q-1-lastQ);
-var cWorst=capTot-cSnapTaken-(taken-uSnapTaken)-ahead;           /* everyone ahead books and is Chinese */
-var leftWorst=total-taken-ahead,leftCur=total-taken-ahead*(1-dRate),leftRh=total-taken-ahead*(1-S.redhill.finalDropout);
+var leftWorst=total-taken-ahead,leftCur=total-taken-ahead*(1-dRate),
+    leftRh=total-taken-ahead*(1-S.redhill.finalDropout);
 
 /* ---- stacks + booking model (model.js) ---- */
 var stacks={},order=[];
 U.units.forEach(function(u){var id=u.b+'-'+u.s;if(!stacks[id]){stacks[id]={b:u.b,s:u.s,units:[],tk:0};order.push(id)}stacks[id].units.push(u);if(u.t)stacks[id].tk++});
 var TARGETS=(S.meta.targetStacks||[]).filter(function(id){return stacks[id]}),isMine={};TARGETS.forEach(function(id){isMine[id]=1});
-var R=null,nTaken=U.units.filter(function(u){return u.t}).length,cqInt={};blocks.forEach(function(b){cqInt[b]=Math.max(0,Math.round(cNow[b]))});
+var R=null,nTaken=U.units.filter(function(u){return u.t}).length;
 var RANK=(S.meta.prefs&&window.BRModel)?BRModel.rank(U.units,S.meta.prefs):[];
 var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,caps:cap,shares:S.quotaModel.scenarios,bookedByBlock:nowTaken,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
   par:window.BRModel?BRModel.learnFloor(U.units):null,

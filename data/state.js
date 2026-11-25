@@ -5,9 +5,9 @@ window.BR_STATE={
     "queue": 462,
     "ethnicity": "Chinese",
     "minFloor": 12,
-    "lastChecked": "2026-11-25T08:17:00+08:00",
-    "unitsAsOf": "2026-11-24",
-    "note": "Unit availability and queue log through 24 Nov 2026; future appointment dates are community/applicant reports.",
+    "lastChecked": "2026-11-25T16:56:00+08:00",
+    "unitsAsOf": "2026-11-25",
+    "note": "25 Nov provisional update: queue log shows 285 called but its booked and drop-out columns are not filled. The 266 taken flats are identified from the colour-coded unit grid; 19 cumulative non-bookings are implied, not confirmed drop-outs.",
     "targetStacks": [
       "201A-141",
       "201A-143",
@@ -530,6 +530,14 @@ window.BR_STATE={
       "last": 270,
       "taken": 256,
       "appts": 15
+    },
+    {
+      "d": "2026-11-25",
+      "last": 285,
+      "taken": 266,
+      "appts": 15,
+      "provisional": true,
+      "note": "Provisional 25 Nov snapshot. Last queue number 285 is in queue log; 266 booked flats are colour-coded in 4-Room Price Chart. 25 Nov booked/drop-out cells are empty. Derived 19 non-bookings are not confirmed drop-outs."
     }
   ],
   "blockHistory": [
@@ -616,6 +624,19 @@ window.BR_STATE={
         "204A": 63,
         "204B": 53
       }
+    },
+    {
+      "d": "2026-11-25",
+      "src": "4-Room Price Chart, provisional colour-coded booked flats",
+      "taken": {
+        "200A": 27,
+        "200B": 9,
+        "201A": 33,
+        "201B": 80,
+        "204A": 64,
+        "204B": 53
+      },
+      "provisional": true
     }
   ],
   "quotaSnap": {

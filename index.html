@@ -361,12 +361,12 @@ function tiles(){
   $('appt-label').textContent=actualAppt?'Your appointment':'Est. appointment';
   $('t-appt').textContent=fd(apptDate,true);
   $('t-appt-s').textContent=actualAppt?'3:15 pm · Date and time reported by you':called?'Your number has been called.':'Community-based estimate; not an HDB confirmation.';
-  $('t-chance-k').textContent='Floor '+minFloor+'+ in your six stacks';
-  if(R){var rg=R.range[minFloor];$('t-chance').textContent=pct(R.chance[minFloor]);$('t-chance-s').textContent='Chance one is still free. Range '+pct(rg[0])+' to '+pct(rg[1])+'.'}
+  $('t-chance-k').textContent='Free AND Chinese-eligible, floor '+minFloor+'+ in your six stacks';
+  if(R){var rg=R.jointRange[minFloor];$('t-chance').textContent=pct(R.jointChance[minFloor]);$('t-chance-s').textContent='Physically free: '+pct(R.chance[minFloor])+'. Eligible sensitivity: '+pct(rg[0])+' to '+pct(rg[1])+' (70–95% assumed Chinese shares).'}
   $('t-left').textContent='≈'+Math.round(leftCur);
   $('t-left-s').textContent='Between '+leftWorst+' and '+Math.round(leftRh)+', depending on drop-outs.';
   var tp=topPicks(1)[0];
-  if(tp){$('t-pick').textContent=fl(tp.u.f)+'-'+tp.u.s;$('t-pick-s').textContent='Blk '+tp.u.b+' · $'+tp.u.p.toLocaleString('en-SG')+' · about '+pct(R.pick[tp.key])+' if you follow your order.'}
+  if(tp){$('t-pick').textContent=fl(tp.u.f)+'-'+tp.u.s;$('t-pick-s').textContent='Blk '+tp.u.b+' · $'+tp.u.p.toLocaleString('en-SG')+' · '+pct(R.pick[tp.key])+' modelled selection (assumed 85% Chinese share).'}
   else if(R){$('t-pick').textContent='None';$('t-pick-s').textContent='No unit in your order is projected to be free.'}
 }
 function topPicks(n){return R&&R.pick?RANK.filter(function(x){return R.pick[x.key]>0}).sort(function(a,b){return R.pick[b.key]-R.pick[a.key]}).slice(0,n):[]}
@@ -379,22 +379,22 @@ function drawLand(){
   if(rest.n)box.appendChild(row('Everything further down your list',rest.free+' free now',pct(rest.p)));
   if(!R){$('h-land').textContent='Working it out…';return}
   var tops=topPicks(3),t0=tops[0];
-  tops.forEach(function(x){bu.appendChild(row('Blk '+x.u.b+' '+fl(x.u.f)+'-'+x.u.s,'$'+x.u.p.toLocaleString('en-SG')+' · '+pct(sv(x.u))+' likely free',pct(R.pick[x.key]),'your pick'))});
-  $('l-lead').textContent=t0?'If you follow your order, you most likely end up with Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s+' at $'+t0.u.p.toLocaleString('en-SG')+': about '+pct(R.pick[t0.key])+'.':'No unit in your order is projected to be free.';
+  tops.forEach(function(x){bu.appendChild(row('Blk '+x.u.b+' '+fl(x.u.f)+'-'+x.u.s,'$'+x.u.p.toLocaleString('en-SG')+' · '+pct(sv(x.u))+' physically free · '+pct(eligible(x.u))+' both free AND Chinese-eligible',pct(R.pick[x.key]),'modelled pick'))});
+  $('l-lead').textContent=t0?'With an assumed 85% Chinese booking share, the model most often selects Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s+' at $'+t0.u.p.toLocaleString('en-SG')+': '+pct(R.pick[t0.key])+'.':'No eligible unit in your ranking was selected in the illustrative reference scenario.';
   $('h-land').textContent=t0?'Most likely Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s:'';
-  $('l-note').textContent=S.meta.prefs.note||'';
+  $('l-note').textContent=(S.meta.prefs.note||'')+' Chinese ethnicity usage is unknown. Assumed shares of 70%, 85% and 95% are sensitivity cases, not measured proportions.';
 }
 function drawMine(){
   var bs=$('m-rows'),bf=$('m-floors');bs.textContent='';bf.textContent='';
   TARGETS.forEach(function(id){var st=stacks[id],free=st.units.filter(function(u){return !u.t&&u.f>=minFloor}).length,ps=R&&R.perStack[id];
-    bs.appendChild(row('Blk '+st.b+' · '+st.s,[free+' free now on floor '+minFloor+' and up',ps?'Any floor: '+pct(ps.chance[2]):null],ps?pct(ps.chance[minFloor]):'…'))});
+    bs.appendChild(row('Blk '+st.b+' · '+st.s,[free+' physically free now on floor '+minFloor+'+',ps?'Physically free at your turn: '+pct(ps.chance[minFloor]):null],ps?pct(ps.joint[minFloor]):'…','free AND Chinese-eligible'))});
   if(!R){$('h-mine').textContent='Working it out…';return}
-  var c=R.chance[minFloor],ro=R.runOut[minFloor];
-  $('m-lead').textContent=(c<.2?'A unit on floor '+minFloor+' or higher in stacks '+stackList()+' is unlikely to be left at your turn: about '+pct(c)+'.':c<.6?'It is a toss-up whether a unit on floor '+minFloor+' or higher in stacks '+stackList()+' is left at your turn: about '+pct(c)+'.':'A unit on floor '+minFloor+' or higher in stacks '+stackList()+' is likely to be left at your turn: about '+pct(c)+'.')+(ro?' The last one is projected to go around queue '+ro.mid+'; you are '+Q+'.':'');
-  $('h-mine').textContent=pct(c)+' for floor '+minFloor+' and up';
+  var c=R.jointChance[minFloor],physical=R.chance[minFloor],rg=R.jointRange[minFloor];
+  $('m-lead').textContent='Under the assumed 85% Chinese share: '+pct(c)+' chance of at least one flat both physically free AND Chinese-eligible, versus '+pct(physical)+' physically free. Ethnic-mix sensitivity: '+pct(rg[0])+' to '+pct(rg[1])+'.';
+  $('h-mine').textContent=pct(c)+' jointly free and eligible, floor '+minFloor+'+';
   var fs=[20,12,10,8,2];if(fs.indexOf(minFloor)<0)fs.push(minFloor);fs.sort(function(a,b){return b-a});
-  fs.forEach(function(f){var rg=R.range[f],r2=R.runOut[f];bf.appendChild(row(f<=2?'Any floor':'Floor '+f+' and up'+(f===minFloor?' (yours)':''),[pct(rg[0])===pct(rg[1])?null:'Range '+pct(rg[0])+' to '+pct(rg[1]),r2?'Gone by about queue '+r2.mid:'Some left after the queue runs out'],pct(R.chance[f])))});
-  $('m-note').textContent='These are model estimates from the '+nTaken+' units booked so far. The model learns a project-wide floor preference from booked units but cannot separate height from price and views. The scenario range also reflects uncertainty over buyers remaining loyal to stacks as their best floors are taken. The range should narrow as more days are logged.';
+  fs.forEach(function(f){var band=R.jointRange[f];bf.appendChild(row(f<=2?'Any floor':'Floor '+f+' and up'+(f===minFloor?' (yours)':''),['Physically free: '+pct(R.chance[f]),'Ethnic-mix sensitivity: '+pct(band[0])+' to '+pct(band[1])],pct(R.jointChance[f]),'free AND eligible'))});
+  $('m-note').textContent='Chinese shares of 70%, 85% and 95% are illustrative, not observed values or confidence intervals.';
 }
 
 /* ---- runway ---- */

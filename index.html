@@ -143,7 +143,7 @@ a{color:var(--accent)}
 </header>
 
 <section class="card answers" aria-label="Summary">
-  <div class="ans lead"><span class="k">Est. appointment</span><span class="v" id="t-appt"></span><span class="s" id="t-appt-s"></span></div>
+  <div class="ans lead"><span class="k" id="appt-label">Est. appointment</span><span class="v" id="t-appt"></span><span class="s" id="t-appt-s"></span></div>
   <div class="ans"><span class="k">Most likely pick</span><span class="v" id="t-pick">…</span><span class="s" id="t-pick-s">Working it out…</span></div>
   <div class="ans"><span class="k" id="t-chance-k">Floor 12+ in your six stacks</span><span class="v" id="t-chance">…</span><span class="s" id="t-chance-s">Working it out…</span></div>
   <div class="ans"><span class="k">Units left at your turn</span><span class="v" id="t-left"></span><span class="s" id="t-left-s"></span></div>
@@ -286,6 +286,7 @@ function sum(a,f){return a.reduce(function(t,x){return t+f(x)},0)}
 
 /* ---- core figures ---- */
 var Q=S.meta.queue,log=S.queueLog,L=log[log.length-1];
+var actualAppt=S.meta.appointment&&S.meta.appointment.queue===Q?S.meta.appointment:null;
 var lastQ=L.last,taken=L.taken,drops=lastQ-taken,dRate=lastQ?drops/lastQ:0;
 var total=U.units.length,pace=L.appts||15;
 var reports=S.appts||[];
@@ -302,7 +303,7 @@ function apptFor(q,p){if(q<=lastQ){for(var i=0;i<log.length;i++)if(log[i].last>=
   if(latestReport&&q>latestBand[1])return addWork(latestReport.date,Math.ceil((q-latestBand[1])/recentPace));
   var later=reports.filter(function(a){return qRange(a.q)[0]>=q}).sort(function(a,b){return a.date.localeCompare(b.date)});
   return later.length?later[0].date:addWork(L.d,Math.ceil((q-lastQ)/p));}
-var apptDate=apptFor(Q,pace),slowPace=15,apptSlow=latestReport&&Q>latestBand[1]?addWork(latestReport.date,Math.ceil((Q-latestBand[0])/slowPace)):apptDate;
+var apptDate=actualAppt?actualAppt.date:apptFor(Q,pace),slowPace=15,apptSlow=latestReport&&Q>latestBand[1]?addWork(latestReport.date,Math.ceil((Q-latestBand[0])/slowPace)):apptDate;
 var posInDay=((Q-lastQ-1)%pace)+1;
 var leads=S.appts.filter(function(a){return a.posted}).map(function(a){return Math.round((D(a.date)-D(a.posted))/864e5)}).sort(function(a,b){return a-b});
 var lead=leads.length?leads[Math.floor(leads.length/2)]:null;
@@ -356,8 +357,9 @@ $('stamp').textContent='Sheet figures to '+fd(L.d)+(lc?' · last checked '+(+lc[
 var minFloor=S.meta.minFloor||2,curBlock=null;
 function row(main,sub,fig,figSub,extra){var r=el('div','row'),m=el('div','m');m.appendChild(el('b',null,main));if(extra)m.appendChild(extra);(Array.isArray(sub)?sub:[sub]).forEach(function(s){if(s)m.appendChild(el('span',null,s))});r.appendChild(m);if(fig!=null){var f=el('div','f',fig);if(figSub)f.appendChild(el('small',null,figSub));r.appendChild(f)}return r}
 function tiles(){
+  $('appt-label').textContent=actualAppt?'Your appointment':'Est. appointment';
   $('t-appt').textContent=fd(apptDate,true);
-  $('t-appt-s').textContent=called?'Your number has been called.':'Community-based estimate; not an HDB confirmation.';
+  $('t-appt-s').textContent=actualAppt?'3:15 pm · Date and time reported by you':called?'Your number has been called.':'Community-based estimate; not an HDB confirmation.';
   $('t-chance-k').textContent='Floor '+minFloor+'+ in your six stacks';
   if(R){var rg=R.range[minFloor];$('t-chance').textContent=pct(R.chance[minFloor]);$('t-chance-s').textContent='Chance one is still free. Range '+pct(rg[0])+' to '+pct(rg[1])+'.'}
   $('t-left').textContent='≈'+Math.round(leftCur);
@@ -400,7 +402,7 @@ function drawMine(){
   var y=el('div','you');y.style.left='calc('+pc(Q)+' - 1px)';y.appendChild(el('span',null,'You '+Q));
   r.appendChild(a);r.appendChild(b);r.appendChild(y);
   $('run-end').textContent=total+' units';$('k-done').textContent=lastQ;$('k-sent').textContent=sentTo;
-  $('q-text').textContent=called?'Your number has been called.':ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Based on community reports through queue '+latestReport.q+' on '+fd(latestReport.date)+', your estimated appointment is '+fd(apptDate,true)+'. Beyond shared appointments the forecast assumes roughly '+recentPace+' queue numbers per working day.';
+  $('q-text').textContent=called?'Your number has been called.':actualAppt?ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Your reported flat-selection appointment is '+fd(actualAppt.date,true)+' at '+actualAppt.time+' (queue '+Q+').':ahead+' queue numbers remain ahead of you as of '+fd(L.d)+'. Based on community reports through queue '+latestReport.q+' on '+fd(latestReport.date)+', your estimated appointment is '+fd(apptDate,true)+'. Beyond shared appointments the forecast assumes roughly '+recentPace+' queue numbers per working day.';
   $('h-queue').textContent=called?'Your number has been called':ahead+' numbers ahead of you';
   $('q-sure').textContent=(leftWorst>0&&cWorst>0)?'A unit of some kind is effectively certain: even if nobody ahead drops out and all are Chinese, '+leftWorst+' units and '+cWorst+' Chinese-quota places remain.':'';
   $('q-check').textContent=future?future+' future community appointment reports recorded. x represents a ten-number band, not an exact queue number.':'';

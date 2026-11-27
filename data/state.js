@@ -5,9 +5,9 @@ window.BR_STATE={
     "queue": 462,
     "ethnicity": "Chinese",
     "minFloor": 12,
-    "lastChecked": "2026-11-26T18:04:00+08:00",
-    "unitsAsOf": "2026-11-26",
-    "note": "26 Nov 2026 complete sheet figures: 305 queue numbers called, 288 flats booked, 17 cumulative drop-outs; 988 price/availability cells reconciled.",
+    "lastChecked": "2026-11-27T18:06:00+08:00",
+    "unitsAsOf": "2026-11-27",
+    "note": "27 Nov 2026 complete sheet figures: 321 queue numbers called, 300 flats booked, 21 cumulative drop-outs; 988 price/availability cells reconciled.",
     "targetStacks": [
       "201A-141",
       "201A-143",
@@ -545,6 +545,13 @@ window.BR_STATE={
       "taken": 288,
       "appts": 20,
       "source": "Completed 26 Nov 2026 Queue log and matching colour-coded booked flats"
+    },
+    {
+      "d": "2026-11-27",
+      "last": 321,
+      "taken": 300,
+      "appts": 16,
+      "source": "Completed 27 Nov 2026 Queue log and matching colour-coded booked flats"
     }
   ],
   "blockHistory": [
@@ -655,6 +662,18 @@ window.BR_STATE={
         "201B": 82,
         "204A": 65,
         "204B": 54
+      }
+    },
+    {
+      "d": "2026-11-27",
+      "src": "4-Room Price Chart, 27 Nov 2026 booked units",
+      "taken": {
+        "200A": 33,
+        "200B": 14,
+        "201A": 50,
+        "201B": 83,
+        "204A": 65,
+        "204B": 55
       }
     }
   ],

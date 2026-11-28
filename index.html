@@ -313,7 +313,7 @@ var sentTo=latestBand[1];
 var future=reports.filter(function(a){return a.date>L.d}).length;
 
 /* ---- quota: official caps, unknown ethnic usage ---- */
-var cap=S.quotaModel.chineseCap,hist=S.blockHistory;
+var cap=S.quotaModel.chineseCap,hist=S.blockHistory,quotaSnap=S.quotaSnap;
 var nowTaken={},unitsIn={};
 blocks.forEach(function(b){nowTaken[b]=0;unitsIn[b]=0;if(!Number.isInteger(cap[b]))throw Error('Missing official Chinese cap '+b)});
 U.units.forEach(function(u){unitsIn[u.b]++;if(u.t)nowTaken[u.b]++});
@@ -328,17 +328,17 @@ U.units.forEach(function(u){var id=u.b+'-'+u.s;if(!stacks[id]){stacks[id]={b:u.b
 var TARGETS=(S.meta.targetStacks||[]).filter(function(id){return stacks[id]}),isMine={};TARGETS.forEach(function(id){isMine[id]=1});
 var R=null,nTaken=U.units.filter(function(u){return u.t}).length;
 var RANK=(S.meta.prefs&&window.BRModel)?BRModel.rank(U.units,S.meta.prefs):[];
-var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,caps:cap,shares:S.quotaModel.scenarios,bookedByBlock:nowTaken,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
+var ctx={units:U.units,lastQ:lastQ,queue:Q,drops:drops,caps:cap,shares:S.quotaModel.scenarios,bookedByBlock:nowTaken,quotaSnap:quotaSnap,targets:TARGETS,ranked:RANK.map(function(x){return x.key}),
   par:window.BRModel?BRModel.learnFloor(U.units):null,
   snaps:hist.map(function(h){return {n:sum(blocks,function(b){return h.taken[b]||0}),taken:h.taken}}).filter(function(s){return s.n>0&&s.n<nTaken})};
 var sig=window.BRModel?BRModel.cacheKey(U,S):null;
 function runModel(done){
   if(called||!window.BRModel)return done();
-  try{var c=JSON.parse(localStorage.getItem('br-model-v6')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
+  try{var c=JSON.parse(localStorage.getItem('br-model-v7')||'null');if(c&&c.sig===sig){R=c.R;return done()}}catch(e){}
   var runs=[],i=0,LAMS=BRModel.LAMS;
   (function step(){
     if(i<LAMS.length){$('t-chance-s').textContent='Working it out, step '+(i+1)+' of '+LAMS.length+'…';setTimeout(function(){runs.push(BRModel.runLambda(ctx,LAMS[i++]));step()},30)}
-    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model-v6',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
+    else{R=BRModel.combine(runs);try{localStorage.setItem('br-model-v7',JSON.stringify({sig:sig,R:R}))}catch(e){}done()}
   })();
 }
 function sv(u){return R?(R.survive[u.b+'-'+u.s+'-'+u.f]||0):null}
@@ -362,7 +362,7 @@ function tiles(){
   $('t-left').textContent='≈'+Math.round(leftCur);
   $('t-left-s').textContent='Between '+leftWorst+' and '+Math.round(leftRh)+', depending on drop-outs.';
   var tp=topPicks(1)[0];
-  if(tp){$('t-pick').textContent=fl(tp.u.f)+'-'+tp.u.s;$('t-pick-s').textContent='Blk '+tp.u.b+' · $'+tp.u.p.toLocaleString('en-SG')+' · '+pct(R.pick[tp.key])+' modelled selection (assumed 85% Chinese share).'}
+  if(tp){$('t-pick').textContent=fl(tp.u.f)+'-'+tp.u.s;$('t-pick-s').textContent='Blk '+tp.u.b+' · $'+tp.u.p.toLocaleString('en-SG')+' · '+pct(R.pick[tp.key])+' modelled selection (assumed 86% Chinese share).'}
   else if(R){$('t-pick').textContent='None';$('t-pick-s').textContent='No unit in your order is projected to be free.'}
 }
 function topPicks(n){return R&&R.pick?RANK.filter(function(x){return R.pick[x.key]>0}).sort(function(a,b){return R.pick[b.key]-R.pick[a.key]}).slice(0,n):[]}
@@ -376,9 +376,9 @@ function drawLand(){
   if(!R){$('h-land').textContent='Working it out…';return}
   var tops=topPicks(3),t0=tops[0];
   tops.forEach(function(x){bu.appendChild(row('Blk '+x.u.b+' '+fl(x.u.f)+'-'+x.u.s,'$'+x.u.p.toLocaleString('en-SG')+' · '+pct(sv(x.u))+' physically free · '+pct(eligible(x.u))+' both free AND Chinese-eligible',pct(R.pick[x.key]),'modelled pick'))});
-  $('l-lead').textContent=t0?'With an assumed 85% Chinese booking share, the model most often selects Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s+' at $'+t0.u.p.toLocaleString('en-SG')+': '+pct(R.pick[t0.key])+'.':'No eligible unit in your ranking was selected in the illustrative reference scenario.';
+  $('l-lead').textContent=t0?'With an assumed 86% Chinese booking share, the model most often selects Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s+' at $'+t0.u.p.toLocaleString('en-SG')+': '+pct(R.pick[t0.key])+'.':'No eligible unit in your ranking was selected in the illustrative reference scenario.';
   $('h-land').textContent=t0?'Most likely Blk '+t0.u.b+' '+fl(t0.u.f)+'-'+t0.u.s:'';
-  $('l-note').textContent=(S.meta.prefs.note||'')+' Chinese ethnicity usage is unknown. Assumed shares of 70%, 85% and 95% are sensitivity cases, not measured proportions.';
+  $('l-note').textContent=(S.meta.prefs.note||'')+' The reported quota snapshot matches 27 Nov bookings; 86% of those bookings were Chinese. Future shares of 70%, 86% and 95% are sensitivity assumptions, not known future proportions.';
 }
 function drawMine(){
   var bs=$('m-rows'),bf=$('m-floors');bs.textContent='';bf.textContent='';
@@ -386,11 +386,11 @@ function drawMine(){
     bs.appendChild(row('Blk '+st.b+' · '+st.s,[free+' physically free now on floor '+minFloor+'+',ps?'Physically free at your turn: '+pct(ps.chance[minFloor]):null],ps?pct(ps.joint[minFloor]):'…','free AND Chinese-eligible'))});
   if(!R){$('h-mine').textContent='Working it out…';return}
   var c=R.jointChance[minFloor],physical=R.chance[minFloor],rg=R.jointRange[minFloor];
-  $('m-lead').textContent='Under the assumed 85% Chinese share: '+pct(c)+' chance of at least one flat both physically free AND Chinese-eligible, versus '+pct(physical)+' physically free. Ethnic-mix sensitivity: '+pct(rg[0])+' to '+pct(rg[1])+'.';
+  $('m-lead').textContent='Under the assumed 86% Chinese share: '+pct(c)+' chance of at least one flat both physically free AND Chinese-eligible, versus '+pct(physical)+' physically free. Ethnic-mix sensitivity: '+pct(rg[0])+' to '+pct(rg[1])+'.';
   $('h-mine').textContent=pct(c)+' jointly free and eligible, floor '+minFloor+'+';
   var fs=[20,12,10,8,2];if(fs.indexOf(minFloor)<0)fs.push(minFloor);fs.sort(function(a,b){return b-a});
   fs.forEach(function(f){var band=R.jointRange[f];bf.appendChild(row(f<=2?'Any floor':'Floor '+f+' and up'+(f===minFloor?' (yours)':''),['Physically free: '+pct(R.chance[f]),'Ethnic-mix sensitivity: '+pct(band[0])+' to '+pct(band[1])],pct(R.jointChance[f]),'free AND eligible'))});
-  $('m-note').textContent='Chinese shares of 70%, 85% and 95% are illustrative, not observed values or confidence intervals.';
+  $('m-note').textContent='Future Chinese shares of 70%, 86% and 95% are illustrative sensitivity assumptions, not confidence intervals. The 86% reference matches the reported 27 Nov snapshot.';
 }
 
 /* ---- runway ---- */
@@ -412,13 +412,13 @@ function drawBlocks(){var box=$('blk-rows');box.textContent='';
         joint=R?sum(U.units.filter(function(u){return u.b===b&&!u.t}),eligible):null,
         chance=R?R.quotaOpen[b]:null,band=R?R.quotaRange[b]:null;
     box.appendChild(row('Blk '+b,[left+' physically unbooked now; official Chinese cap '+cap[b],
-      'At least '+Math.max(0,cap[b]-nowTaken[b])+' quota slots remain now, even if every booking were Chinese',
-      R?'At queue '+Q+': ≈'+Math.round(physical)+' physically free and ≈'+Math.round(joint)+' jointly free AND eligible (assumed 85% case)':null,
+      (quotaSnap&&quotaSnap.left[b]&&quotaSnap.bookedByBlock&&nowTaken[b]>=quotaSnap.bookedByBlock[b]?'Reported '+fd(quotaSnap.d)+' quota: '+quotaSnap.left[b].C+' C / '+quotaSnap.left[b].M+' M / '+quotaSnap.left[b].IO+' I/O'+(nowTaken[b]>quotaSnap.bookedByBlock[b]?' (current Chinese headroom at least '+Math.max(0,quotaSnap.left[b].C-(nowTaken[b]-quotaSnap.bookedByBlock[b]))+')':''):'At least '+Math.max(0,cap[b]-nowTaken[b])+' Chinese quota places remain'),
+      R?'At queue '+Q+': ≈'+Math.round(physical)+' physically free and ≈'+Math.round(joint)+' jointly free AND eligible (assumed 86% case)':null,
       R?'Quota-open sensitivity: '+pct(band[0])+' to '+pct(band[1]):null],
       R?pct(chance):'…','assumed quota-open chance'));
   });
   $('h-blocks').textContent=(total-nTaken)+' physically unbooked now';
-  $('blk-note').textContent='Official HDB Chinese caps, 29 July 2026: 200A 145, 200B 152, 201A 155, 201B 145, 204A 128, 204B 108. Current ethnic quota use is unknown. Scenario assumptions are 70%, 85% and 95% Chinese shares of past and future bookings, not measured frequencies or statistical confidence intervals.';
+  $('blk-note').textContent='Official HDB Chinese caps, 29 July 2026: 200A 145, 200B 152, 201A 155, 201B 145, 204A 128, 204B 108. Reported quota balances (received 28 Nov) reconcile to the 27 Nov booking grid; 258 of 300 bookings were Chinese. Forecasts start from those balances, then simulate only later bookings using future Chinese shares of 70%, 86% or 95%. The snapshot is applicant-reported, not independently verified; sensitivity cases are not confidence intervals.';
 }
 /* ---- unit map ---- */
 var VIEW={'204A':{'100':'sea','102':'sea'},'204B':{'116':'sea','118':'sea'},'200A':{'109':'sea','111':'sea','113':'park side','115':'park side'},'200B':{'125':'sea, part','127':'sea, part','129':'park side','131':'park side'},'201A':{'145':'park side','147':'park side'}};
@@ -435,11 +435,11 @@ function drawMap(){
   B.stacks.forEach(function(s){var st=stacks[curBlock+'-'+s],h=el('div','hd'+(isMine[curBlock+'-'+s]?' mine':''));h.appendChild(el('b',null,s));h.appendChild(document.createTextNode(((VIEW[curBlock]||{})[s]||'not assessed')));h.appendChild(document.createElement('br'));h.appendChild(el('span','muted num',st.tk+'/'+st.units.length+' taken'));m.appendChild(h)});
   for(var f=maxF;f>=2;f--){m.appendChild(el('div','fl',fl(f)));
     B.stacks.forEach(function(s){var u=by[f+'-'+s],c;
-      if(!u)c=el('div','u none','no unit');else{var p=sv(u),e=eligible(u);c=el('div','u '+(u.t?'tk':(show&&p<.5?'gone':'av'))+(f<minFloor?' low':''),k(u.p));c.title='Blk '+u.b+' '+fl(f)+'-'+s+' · $'+u.p.toLocaleString('en-SG')+(u.t?' · taken':(R?' · '+pct(p)+' physically free; '+pct(e)+' jointly free AND Chinese-eligible (assumed 85% share)':' · available now'))}
+      if(!u)c=el('div','u none','no unit');else{var p=sv(u),e=eligible(u);c=el('div','u '+(u.t?'tk':(show&&p<.5?'gone':'av'))+(f<minFloor?' low':''),k(u.p));c.title='Blk '+u.b+' '+fl(f)+'-'+s+' · $'+u.p.toLocaleString('en-SG')+(u.t?' · taken':(R?' · '+pct(p)+' physically free; '+pct(e)+' jointly free AND Chinese-eligible (assumed 86% share)':' · available now'))}
       m.appendChild(c)})}
   var av=U.units.filter(function(u){return u.b===curBlock&&!u.t&&u.f>=minFloor}),then=av.filter(function(u){return R&&sv(u)>=.5});
   var cheap=then.slice().sort(function(a,b){return a.p-b.p})[0];
-  $('u-sum').textContent='Blk '+curBlock+': '+av.length+' physically unbooked units on floor '+minFloor+'+ now'+(R?'; ≈'+Math.round(sum(av,sv))+' physically free and ≈'+Math.round(sum(av,eligible))+' jointly free AND Chinese-eligible at your turn (assumed 85% share)':'')+'. Current ethnic quota usage is unknown.';
+  $('u-sum').textContent='Blk '+curBlock+': '+av.length+' physically unbooked units on floor '+minFloor+'+ now'+(R?'; ≈'+Math.round(sum(av,sv))+' physically free and ≈'+Math.round(sum(av,eligible))+' jointly free AND Chinese-eligible at your turn (assumed 86% share)':'')+'. Quota forecasts start from the reported 27 Nov balances; later usage is estimated.';
 }
 
 /* ---- charts ---- */
@@ -477,13 +477,13 @@ function drawDrop(){var box=$('ch-drop'),old=box.querySelector('svg');if(old)old
   box.appendChild(svg)}
 
 /* ---- text + tables ---- */
-$('race-note').textContent='Ethnicity of currently booked flats is not publicly known. The older 10 November quota snapshot is retained for historical reference but is not used as a live quota measurement. Assumed ethnic mixes drive the scenarios.';
+$('race-note').textContent='Reported 27 Nov quota snapshot (received 28 Nov): 258 Chinese, 14 Malay and 28 Indian/Others bookings, totalling 300. All six block totals reconcile with the booking grid. The reported figures are not independently verified.';
 $('d-text').textContent=drops+' queue numbers have no corresponding booking recorded ('+(dRate*100).toFixed(1)+'%). '+(L.provisional?'This is provisional: the latest queue log has not confirmed completed bookings or drop-outs. ':'')+'Each actual drop-out ahead of you leaves an additional flat for your turn.';
 $('d-note').textContent='For your queue, observed booking/non-booking rates affect how many flats might remain ('+leftWorst+' to '+Math.round(leftRh)+').'+(L.provisional?' * The 25 Nov entry is provisional; booked counts come from the coloured unit chart, not a completed queue-log row.':'');
 (function(){var tb=$('ap-table').tBodies[0];S.appts.forEach(function(a){var tr=el('tr');['Q'+a.q,fd(a.date,true),a.time||'—',a.posted?fd(a.posted):'Not supplied'].forEach(function(v){tr.appendChild(el('td',null,v))});tb.appendChild(tr)});
   $('ap-note').textContent='Community-reported scheduled appointments, not completed bookings. x masks the final digit. Duplicate reports have been consolidated. The 18 Nov community summary overlaps 17 Nov; the booking log retains the previously recorded non-overlapping range. '+S.apptsSrc;
   var lt=$('log-table').tBodies[0];days.slice().reverse().forEach(function(d){var tr=el('tr');[fd(d.d)+(d.provisional?'*':''),d.from+'–'+d.to,d.booked,d.drop,d.left].forEach(function(v){tr.appendChild(el('td',null,v))});lt.appendChild(tr)});
-  $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('Official original HDB caps total '+capTot+' across six blocks. Live ethnic quota use is unknown. The model separates physical availability from Chinese eligibility under three illustrative assumed booking shares (70%, 85%, 95%), not statistical confidence bounds.'));
+  $('about-quota').innerHTML='';$('about-quota').appendChild(el('b',null,'Chinese quota: '));$('about-quota').appendChild(document.createTextNode('Official original HDB caps total '+capTot+' across six blocks. The applicant-reported 27 Nov balances reconcile with all 300 bookings; later usage is estimated using 70%, 86% and 95% future Chinese shares (86% matches the reported historical mix). These are sensitivity cases, not confidence bounds.'));
   $('about-floor').appendChild(el('b',null,'Floor preference model: '));
   $('about-floor').appendChild(document.createTextNode(ctx.par?(ctx.par.method==='hybrid'?'Learnt from '+ctx.par.booked+' booked units in '+ctx.par.stacks+' informative stacks, with a conservative prior. ':'Using a conservative prior until enough bookings are available. ')+ 'Estimated relative weight: '+Math.exp(ctx.par.floor).toFixed(1)+'× for 10 floors higher and '+Math.exp(ctx.par.top2).toFixed(1)+'× extra for the top two floors. This does not isolate price or view effects.':'Not loaded.'));
   $('about-redhill').appendChild(el('b',null,'Redhill Peaks (Feb 2026): '));$('about-redhill').appendChild(document.createTextNode('Chinese limit '+S.redhill.chineseCap+' of '+S.redhill.units+' units, quota ran out near queue '+S.redhill.quotaOutQueue+', about '+Math.round(S.redhill.finalDropout*100)+'% dropped out by the end. These are '+S.redhill.src+'.'));

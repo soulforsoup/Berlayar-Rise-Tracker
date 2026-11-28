@@ -678,40 +678,55 @@ window.BR_STATE={
     }
   ],
   "quotaSnap": {
-    "d": "2026-11-10",
-    "src": "HDB figures as shown in the tracker in your video",
+    "d": "2026-11-27",
+    "reportedOn": "2026-11-28",
+    "src": "Applicant-supplied remaining-quota balances, reconciled to the 27 Nov 2026 booking grid; not independently verified",
     "left": {
       "200A": {
-        "C": 144,
+        "C": 115,
         "M": 38,
-        "IO": 21
-      },
-      "200B": {
-        "C": 151,
-        "M": 40,
-        "IO": 22
-      },
-      "201A": {
-        "C": 152,
-        "M": 40,
-        "IO": 21
-      },
-      "201B": {
-        "C": 119,
-        "M": 35,
-        "IO": 19
-      },
-      "204A": {
-        "C": 102,
-        "M": 33,
         "IO": 18
       },
+      "200B": {
+        "C": 141,
+        "M": 39,
+        "IO": 20
+      },
+      "201A": {
+        "C": 113,
+        "M": 38,
+        "IO": 18
+      },
+      "201B": {
+        "C": 73,
+        "M": 32,
+        "IO": 16
+      },
+      "204A": {
+        "C": 69,
+        "M": 32,
+        "IO": 15
+      },
       "204B": {
-        "C": 93,
-        "M": 29,
-        "IO": 14
+        "C": 64,
+        "M": 27,
+        "IO": 7
       }
-    }
+    },
+    "bookedByBlock": {
+      "200A": 33,
+      "200B": 14,
+      "201A": 50,
+      "201B": 83,
+      "204A": 65,
+      "204B": 55
+    },
+    "used": {
+      "C": 258,
+      "M": 14,
+      "IO": 28
+    },
+    "reported": true
   },
   "appts": [
     {
@@ -1002,10 +1017,48 @@ window.BR_STATE={
     },
     "scenarios": {
       "low": 0.7,
-      "reference": 0.85,
+      "reference": 0.86,
       "high": 0.95
     },
     "source": "HDB June 2026 Bukit Merah 4-room flat price list, updated 29 July 2026",
-    "caveat": "Current Chinese quota usage is unknown. 70%, 85% and 95% are illustrative assumptions about Chinese share of bookings, not observed frequencies or statistical confidence intervals."
-  }
+    "caveat": "The applicant-reported 28 Nov quota balances reconcile with the 27 Nov booking grid. Future Chinese booking shares of 70%, 86% (historical share), and 95% are illustrative sensitivity cases, not confidence intervals. Only bookings after the snapshot require simulated ethnicities."
+  },
+  "quotaHistory": [
+    {
+      "d": "2026-11-10",
+      "src": "HDB figures as shown in the tracker in your video",
+      "left": {
+        "200A": {
+          "C": 144,
+          "M": 38,
+          "IO": 21
+        },
+        "200B": {
+          "C": 151,
+          "M": 40,
+          "IO": 22
+        },
+        "201A": {
+          "C": 152,
+          "M": 40,
+          "IO": 21
+        },
+        "201B": {
+          "C": 119,
+          "M": 35,
+          "IO": 19
+        },
+        "204A": {
+          "C": 102,
+          "M": 33,
+          "IO": 18
+        },
+        "204B": {
+          "C": 93,
+          "M": 29,
+          "IO": 14
+        }
+      }
+    }
+  ]
 };

@@ -24,7 +24,7 @@ function beta(a,b,r){var x=gamma(a,r),y=gamma(b,r);return x/(x+y)}
    A Gaussian prior keeps small or unusual samples from producing extreme
    weights. Height, views and floor-dependent prices are confounded, so
    these are descriptive preferences, not causal estimates. */
-var VERSION='quota-sensitivity-v2';
+var VERSION='quota-snapshot-v3';
 var PAR={floor:Math.log(2),top2:Math.log(1.25)};
 var PRIOR_SD={floor:0.65,top2:0.60};
 var LEGACY_PAR={floor:1.75,top2:1.5};
@@ -173,7 +173,7 @@ function forecast(o){
   var loc={},rk=[],rkKey=[];P.st.forEach(function(x,k2){x.units.forEach(function(u,j2){loc[u.b+'-'+u.s+'-'+u.f]=[k2,j2]})});
   (o.ranked||[]).forEach(function(key){if(loc[key]){rk.push(loc[key]);rkKey.push(key)}});var pickCnt=new Float64Array(rk.length),noPick=0;
   for(var s=0;s<S;s++){
-    var d=beta(o.drops+1,o.called-o.drops+1,r),cq={};blocks.forEach(function(b){var n=o.bookedByBlock[b]||0,used=0;for(var i=0;i<n;i++)if(r()<o.chineseShare)used++;cq[b]=Math.max(0,o.caps[b]-used)});
+    var d=beta(o.drops+1,o.called-o.drops+1,r),cq={};blocks.forEach(function(b){var n=o.bookedByBlock[b]||0,remaining=o.caps[b],used=0,s=o.quotaSnap;/* Apply reported balances only when baseline counts are compatible. */if(s&&s.left&&s.bookedByBlock&&s.left[b]&&Number.isInteger(s.left[b].C)&&s.left[b].C>=0&&s.left[b].C<=remaining&&Number.isInteger(s.bookedByBlock[b])&&s.bookedByBlock[b]>=0&&s.bookedByBlock[b]<=n){remaining=s.left[b].C;n-=s.bookedByBlock[b]}for(var i=0;i<n;i++)if(r()<o.chineseShare)used++;cq[b]=Math.max(0,remaining-used)});
     var free=P.st.map(function(x){return Uint8Array.from(x.units,function(u){return u.t?0:1})}),sum=P.st.map(function(x,k2){var t=0;for(var i=0;i<x.w.length;i++)if(free[k2][i])t+=x.w[i];return t});
     var tLeft={},lastTaken={},remaining=0;F.forEach(function(f){tLeft[f]=0});
     for(k=0;k<K;k++)for(j=0;j<free[k].length;j++)if(free[k][j]){remaining++;if(isT[k])for(var f2=2;f2<=P.st[k].units[j].f;f2++)tLeft[f2]++}
@@ -231,7 +231,7 @@ function runLambda(ctx,lam,opt){
   opt=opt||{};var sizes=ctx.snaps.map(function(s){return s.n});
   var cal=calibrate(ctx.units,ctx.par||learnFloor(ctx.units),lam,sizes,{sims:opt.calSims||60,rounds:opt.rounds||8});
   var loss=0;ctx.snaps.forEach(function(s,i){for(var b in s.taken){var m=cal.snaps[i][b]||0;loss+=(m-s.taken[b])*(m-s.taken[b])/(m+1)}});
-  var base={cal:cal,lastQ:ctx.lastQ,queue:ctx.queue,drops:ctx.drops,called:ctx.lastQ,caps:ctx.caps,bookedByBlock:ctx.bookedByBlock,targets:ctx.targets,ranked:ctx.ranked,seed:462+Math.round(lam*100)};
+  var base={cal:cal,lastQ:ctx.lastQ,queue:ctx.queue,drops:ctx.drops,called:ctx.lastQ,caps:ctx.caps,bookedByBlock:ctx.bookedByBlock,quotaSnap:ctx.quotaSnap,targets:ctx.targets,ranked:ctx.ranked,seed:462+Math.round(lam*100)};
   function sim(share,n){return forecast(Object.assign({},base,{chineseShare:share,sims:n}))}
   return {lam:lam,loss:loss,fc:sim(ctx.shares.reference,opt.sims||200),low:sim(ctx.shares.low,opt.edgeSims||100),high:sim(ctx.shares.high,opt.edgeSims||100)}
 }

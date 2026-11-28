@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 require('../model.js');
 const M=globalThis.BRModel;
-assert.equal(M.VERSION,'quota-sensitivity-v2');
+assert.equal(M.VERSION,'quota-snapshot-v3');
 function sample(type){
   const us=[];
   for(let s=0;s<6;s++)for(let f=2;f<=13;f++){

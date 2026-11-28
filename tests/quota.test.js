@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 require('../model.js');
 const M=globalThis.BRModel;
-assert.equal(M.VERSION,'quota-sensitivity-v2');
+assert.equal(M.VERSION,'quota-snapshot-v3');
 const u={b:'X',s:'1',f:12,p:500000,t:0};
 const P=M.prep([u],M.PAR);
 const base={cal:{P:P,a:[0],lam:0},caps:{X:0},bookedByBlock:{X:0},lastQ:0,queue:1,drops:0,called:0,chineseShare:.85,targets:['X-1'],ranked:['X-1-12'],sims:50,seed:9};
@@ -21,3 +21,11 @@ assert.notEqual(M.cacheKey(units,state),a,'changing official caps must invalidat
 state.quotaModel.chineseCap.X=1;state.quotaModel.scenarios.high=.99;
 assert.notEqual(M.cacheKey(units,state),a,'changing scenario mix must invalidate cache');
 console.log('Quota scenario regression tests passed.');
+
+// A reconciled snapshot must supersede hypothetical past ethnic composition.
+const bookedUnit={...u,f:11,t:1};
+const withBooked=M.prep([u,bookedUnit],M.PAR);
+const anchored={...base,cal:{P:withBooked,a:[0],lam:0},caps:{X:1},bookedByBlock:{X:1},quotaSnap:{left:{X:{C:0}},bookedByBlock:{X:1}},chineseShare:0};
+assert.equal(M.forecast(anchored).joint['X-1-12'],0,'reported closed quota overrides assumed historical share');
+assert.equal(M.forecast({...anchored,quotaSnap:{left:{X:{C:1}},bookedByBlock:{X:1}},chineseShare:1}).joint['X-1-12'],1,'reported open quota overrides assumed historical share');
+assert.equal(M.forecast({...anchored,quotaSnap:{left:{X:{C:1}},bookedByBlock:{X:0}},chineseShare:1}).joint['X-1-12'],0,'post-snapshot bookings reduce remaining quota');
